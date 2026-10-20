@@ -3,7 +3,7 @@ import { SITE_URL, PAYPAL_LINK, PaymentError, ready, emailReady, verifyPDT, veri
 const headers = {
   'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 };
 function json(data, status = 200) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } }); }
 function htmlResponse(body, status = 200) { return new Response(body, { status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' } }); }
@@ -27,6 +27,8 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url),path=url.pathname;
   try {
+   if(path==='/analytics.js' && request.method==='GET')return new Response(assets.analytics,{headers:{...headers,'Content-Type':'text/javascript; charset=utf-8'}});
+   if(path==='/privacy' && request.method==='GET')return htmlResponse(page('Privacy', '<h1>Privacy &amp; analytics.</h1><p>OPortals.com uses essential payment and download functions to provide the book. PayPal processes payments. Our contact form opens your email app; it does not send your question to Google Analytics.</p><h2>Optional analytics</h2><p>If you accept analytics, Google Analytics 4 measures visits, traffic sources, preview clicks and checkout clicks. It can collect identifiers, device/browser information and approximate location. Google processes this data on our behalf; processing may occur outside your country. We do not send your contact message, email address, PayPal transaction ID or download token in the analytics events we implement. Analytics is not loaded on payment-return or download pages.</p><p>We keep your analytics choice on this device for up to 180 days. Google Analytics cookies can last up to two years; their lifetimes can be renewed by visits. Advertising storage, Google signals and advertising personalization are disabled in our tag configuration. Your Analytics property settings may also affect data retention.</p><h2>Your choice</h2><p>Analytics is optional and stays off until accepted. To change your choice or withdraw consent, use Privacy settings in the homepage footer. Rejecting clears analytics cookies this site can access and reloads the page if needed. This does not delete analytics data already received by Google.</p><p><a class="secondary" href="https://policies.google.com/privacy" rel="noopener noreferrer">Google privacy information</a></p><p>For privacy questions or requests, use our <a class="secondary" href="/#contact">contact form</a>.</p>'));
    if(path==='/api/status' && request.method==='GET')return json({checkoutReady:ready(env),emailEnabled:emailReady(env)});
    if(path==='/api/paypal/ipn') {
     if(request.method!=='POST')return json({error:'Method not allowed.'},405);
