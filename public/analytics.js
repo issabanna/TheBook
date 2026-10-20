@@ -17,15 +17,15 @@
     return safe.href;
   }
   function cleanReferrer() { try { const r = new URL(document.referrer); return r.origin + r.pathname; } catch { return ''; } }
-  function enable() {
+  function enable(withCookies = false) {
     enabled = true;
     window['ga-disable-' + ID] = false;
-    if (loaded) return;
+    if (loaded) { if (withCookies) window.gtag('consent', 'update', { analytics_storage: 'granted' }); return; }
     loaded = true;
     window.dataLayer = window.dataLayer || [];
     window.gtag = function () { window.dataLayer.push(arguments); };
     window.gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
-    window.gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
+    if (withCookies) window.gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
     window.gtag('js', new Date());
     window.gtag('config', ID, { send_page_view: false, allow_google_signals: false, allow_ad_personalization_signals: false, page_location: cleanLocation(), page_referrer: cleanReferrer() });
     window.gtag('event', 'page_view', { page_location: cleanLocation(), page_referrer: cleanReferrer(), page_title: document.title });
@@ -42,7 +42,7 @@
   }
   function choose(choice) {
     save(choice); if (banner) banner.hidden = true;
-    if (choice === 'accepted') enable();
+    if (choice === 'accepted') enable(true);
     else {
       enabled = false; window['ga-disable-' + ID] = true; clearCookies();
       // A reload unloads an already-running Google script after consent is withdrawn.
@@ -50,8 +50,9 @@
     }
   }
   const stored = preference();
-  if (stored === 'accepted') enable();
+  if (stored === 'accepted') enable(true);
   else if (stored === 'rejected') { window['ga-disable-' + ID] = true; clearCookies(); }
+  else enable(false);
   if (banner) banner.hidden = true;
   document.getElementById('analytics-accept')?.addEventListener('click', () => choose('accepted'));
   document.getElementById('analytics-reject')?.addEventListener('click', () => choose('rejected'));
