@@ -3,7 +3,7 @@ import path from 'node:path';
 const root=path.resolve(import.meta.dirname,'..');
 const read=p=>readFile(path.join(root,p),'utf8');
 await rm(path.join(root,'dist'),{recursive:true,force:true});
-const assets={home:await read('public/index.html'),sample:(await readFile(path.join(root,'public/Life-Secrets-Sample.pdf'))).toString('base64'),book:JSON.parse(await read('src/encrypted-book.json'))};
+const assets={logo:await read('public/oportals-mark.svg'),home:await read('public/index.html'),sample:(await readFile(path.join(root,'public/Life-Secrets-Sample.pdf'))).toString('base64'),book:JSON.parse(await read('src/encrypted-book.json'))};
 const payment=await read('src/payment.mjs');
 const worker=(await read('src/worker.mjs')).replace(/^import .*from '\.\/payment.mjs';\n/,'');
 await mkdir(path.join(root,'dist/server'),{recursive:true});await mkdir(path.join(root,'dist/.openai'),{recursive:true});

@@ -61,7 +61,7 @@ export function createHandler(assets, fetcher = fetch) {
    if(request.method!=='GET' && request.method!=='HEAD')return json({error:'Method not allowed.'},405);
    if(path==='/paypal/return')return htmlResponse(receiptPage);
    if(path==='/Life-Secrets-Sample.pdf')return new Response(request.method==='HEAD'?null:fromBase64(assets.sample),{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'inline; filename="Life-Secrets-Sample.pdf"'}});
-   if(path==='/favicon.svg')return new Response('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#f1eee5"/><path d="M17 52V28a15 15 0 0130 0v24z" fill="none" stroke="#68734b" stroke-width="3"/><ellipse cx="32" cy="32" rx="8" ry="12" fill="none" stroke="#262b21" stroke-width="2"/></svg>',{headers:{...headers,'Content-Type':'image/svg+xml'}});
+   if(path==='/favicon.svg' || path==='/oportals-mark.svg')return new Response(assets.logo,{headers:{...headers,'Content-Type':'image/svg+xml'}});
    if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
    if(path==='/')return htmlResponse(assets.home);
    return htmlResponse(page('Page not found','<h1>Page not found.</h1><p>Follow the link below to return to the book.</p>'),404);
