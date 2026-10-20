@@ -1,3 +1,3 @@
 import { execFileSync } from 'node:child_process';
-execFileSync('tar',['-czf','/workspace/thebook-deploy.tar.gz','-C','dist','.'],{stdio:'inherit'});
+execFileSync('tar',['-czf','/workspace/thebook-deploy.tar.gz','.openai/hosting.json','dist/server/index.js'],{stdio:'inherit'});
 console.log('/workspace/thebook-deploy.tar.gz');
