@@ -1,0 +1,11 @@
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..');
+const read=p=>readFile(path.join(root,p),'utf8');
+const assets={home:await read('public/index.html'),sample:(await readFile(path.join(root,'public/Life-Secrets-Sample.pdf'))).toString('base64'),book:JSON.parse(await read('src/encrypted-book.json'))};
+const payment=await read('src/payment.mjs');
+const worker=(await read('src/worker.mjs')).replace(/^import .*from '\.\/payment.mjs';\n/,'');
+await mkdir(path.join(root,'dist/server'),{recursive:true});await mkdir(path.join(root,'dist/.openai'),{recursive:true});
+await writeFile(path.join(root,'dist/server/index.js'),payment+'\n'+worker+'\nconst assets='+JSON.stringify(assets)+';\nexport default { fetch: createHandler(assets) };\n');
+await writeFile(path.join(root,'dist/.openai/hosting.json'),await read('.openai/hosting.json'));
+console.log('Built Worker: public sales page, free sample, verified checkout and encrypted book.');
