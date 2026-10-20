@@ -39,7 +39,7 @@ export function createHandler(assets, fetcher = fetch) {
    }
    if(path==='/api/paypal/verify') {
     if(request.method!=='POST')return json({error:'Method not allowed.'},405);
-    if(![SITE_URL,'https://oportals.com'].includes(url.origin) || request.headers.get('origin')!==url.origin)return json({error:'Request origin not allowed.'},403);
+    if(![SITE_URL,'https://life-secrets-guide.issawbanna.chatgpt.site'].includes(url.origin) || request.headers.get('origin')!==url.origin)return json({error:'Request origin not allowed.'},403);
     if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'Unsupported content type.'},415);
     let data;try{data=JSON.parse(await limitedBody(request,1024));}catch(e){if(e instanceof PaymentError)throw e;throw new PaymentError('Invalid request.');}
     const payment=await verifyPDT(data?.transaction,env,fetcher);

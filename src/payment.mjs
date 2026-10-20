@@ -2,7 +2,7 @@ const encoder = new TextEncoder();
 export class PaymentError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
 }
-export const SITE_URL = 'https://life-secrets-guide.issawbanna.chatgpt.site';
+export const SITE_URL = 'https://oportals.com';
 export const PAYPAL_LINK = 'https://www.paypal.com/ncp/payment/CS8XK9B6XLU64';
 export function ready(env) {
   return Boolean(env.PAYPAL_PDT_TOKEN && env.PAYPAL_RECEIVER_EMAIL && env.BOOK_ENCRYPTION_KEY && env.DOWNLOAD_SIGNING_KEY);
@@ -20,7 +20,8 @@ export function assertPayment(p, env, tx) {
   if (p.get('payment_status') !== 'Completed') throw new PaymentError('Payment is not completed.', 403);
   if (p.get('mc_currency') !== 'USD' || !/^15(?:\.00)?$/.test(p.get('mc_gross') || '')) throw new PaymentError('Payment does not match this book.', 403);
   if ((p.get('receiver_email') || '').toLowerCase() !== env.PAYPAL_RECEIVER_EMAIL.trim().toLowerCase()) throw new PaymentError('Payment recipient does not match.', 403);
-  if (p.get('item_number') !== (env.PAYPAL_ITEM_NUMBER || 'LIFE-SECRETS')) throw new PaymentError('Payment product does not match.', 403);
+  const productMatches = env.PAYPAL_ITEM_NAME ? p.get('item_name') === env.PAYPAL_ITEM_NAME : p.get('item_number') === (env.PAYPAL_ITEM_NUMBER || 'LIFE-SECRETS');
+  if (!productMatches) throw new PaymentError('Payment product does not match.', 403);
   if (!validTransaction(p.get('txn_id')) || (tx && tx !== p.get('txn_id'))) throw new PaymentError('Transaction does not match.', 403);
   if (env.PAYPAL_ENV !== 'sandbox' && p.get('test_ipn') === '1') throw new PaymentError('Test payments are not accepted here.', 403);
   return p;

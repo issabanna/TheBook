@@ -71,3 +71,11 @@ test('IPN pending events never send mail and outages cause retries instead of ac
  const h2=createHandler({},async(url)=>url.includes('resend')?new Response('{}',{status:500}):new Response('VERIFIED'));
  assert.equal((await h2(req(payment({payment_date:new Date().toISOString()})),{...env,RESEND_API_KEY:'test',EMAIL_FROM:'books@example.com'})).status,503);
 });
+
+test('payment-link title matching verifies the exact configured book when no SKU is sent',()=>{
+ const linkEnv={...env,PAYPAL_ITEM_NAME:'Life secrets book'};
+ const p=payment({item_name:'Life secrets book',item_number:''});
+ assert.equal(assertPayment(p,linkEnv).get('txn_id'),tx);
+ assert.throws(()=>assertPayment(payment({item_name:'Another book',item_number:''}),linkEnv));
+ assert.throws(()=>assertPayment(payment({item_name:'Life secrets book',mc_gross:'1.00'}),linkEnv));
+});

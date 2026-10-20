@@ -80,3 +80,7 @@ Automated tests cover exact price/currency/product/recipient, incomplete/refunde
 - [PayPal PDT samples](https://github.com/paypal/pdt-code-samples)
 - [PayPal IPN samples](https://github.com/paypal/ipn-code-samples)
 - [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys)
+
+## Current live payment-link configuration
+
+The public PayPal link was inspected: it charges 15.00 USD and sends item_name `Life secrets book` without item_number. The deployed configuration uses PAYPAL_ITEM_NAME with that exact title. This overrides the SKU comparison; amount, currency, recipient, completed status and transaction matching still apply. The canonical return URL is now https://oportals.com/paypal/return. A real transaction is still required to verify PDT end to end.
