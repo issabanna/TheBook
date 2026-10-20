@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
  <defs>
-  <linearGradient id="ring" x1="15" y1="14" x2="65" y2="69" gradientUnits="userSpaceOnUse"><stop stop-color="#fbb93f"/><stop offset=".45" stop-color="#fff4d0"/><stop offset="1" stop-color="#4d5661"/></linearGradient>
-  <linearGradient id="light" x1="40" y1="28" x2="40" y2="66" gradientUnits="userSpaceOnUse"><stop stop-color="#fff7df"/><stop offset="1" stop-color="#fbb93f" stop-opacity=".15"/></linearGradient>
-  <radialGradient id="glow"><stop stop-color="#fff4c4" stop-opacity=".9"/><stop offset="1" stop-color="#f89053" stop-opacity="0"/></radialGradient>
+  <linearGradient id="ring" x1="15" y1="14" x2="65" y2="69" gradientUnits="userSpaceOnUse"><stop stop-color="#9ca67c"/><stop offset=".45" stop-color="#d5c58f"/><stop offset="1" stop-color="#66734c"/></linearGradient>
+  <linearGradient id="light" x1="40" y1="28" x2="40" y2="66" gradientUnits="userSpaceOnUse"><stop stop-color="#fffdf2"/><stop offset="1" stop-color="#e3d19b" stop-opacity=".15"/></linearGradient>
+  <radialGradient id="glow"><stop stop-color="#fff4c4" stop-opacity=".9"/><stop offset="1" stop-color="#e2d7ac" stop-opacity="0"/></radialGradient>
  </defs>
  <circle cx="40" cy="40" r="38" fill="url(#glow)"/>
  <circle cx="40" cy="40" r="29" stroke="url(#ring)" stroke-width="5.5"/>
- <circle cx="40" cy="40" r="24" stroke="#fbb93f" stroke-width=".7" opacity=".5"/>
- <path d="M31 55V36a9 9 0 0 1 18 0v19" fill="url(#light)" stroke="#4d5661" stroke-width="1.5"/>
- <path d="m43 31 9-5v30l-9 5z" fill="#4d5661"/>
- <path d="M43 31v30" stroke="#fbb93f" stroke-width="1"/>
- <path d="M30 56h14" stroke="#fff7df" stroke-width="2" stroke-linecap="round"/>
+ <circle cx="40" cy="40" r="24" stroke="#b5ba96" stroke-width=".7" opacity=".5"/>
+ <path d="M31 55V36a9 9 0 0 1 18 0v19" fill="url(#light)" stroke="#727e55" stroke-width="1.5"/>
+ <path d="m43 31 9-5v30l-9 5z" fill="#66734c"/>
+ <path d="M43 31v30" stroke="#d9c58b" stroke-width="1"/>
+ <path d="M30 56h14" stroke="#faf3d6" stroke-width="2" stroke-linecap="round"/>
  <path d="m34 58-8 9h24l-8-9" fill="url(#light)" opacity=".6"/>
 </svg>
