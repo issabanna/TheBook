@@ -8,7 +8,7 @@ const headers = {
 function json(data, status = 200) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } }); }
 function htmlResponse(body, status = 200) { return new Response(body, { status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' } }); }
 const pageStyle = `body{background:#f1eee5;color:#262b21;font:16px/1.7 Arial,sans-serif;max-width:650px;margin:10vh auto;padding:25px}h1{font:52px/1.1 Georgia,serif}a,button{display:inline-block;background:#262b21;color:#f1eee5;padding:14px 22px;border:0;border-radius:4px;text-decoration:none;cursor:pointer;font:inherit}small{color:#68734b}input{box-sizing:border-box;padding:14px;width:100%;margin:12px 0;border:1px solid #aeb49b;background:#fffdf7;font:inherit}button{margin:10px 0}#download[hidden],form[hidden]{display:none}#message{white-space:pre-wrap}a.secondary{background:transparent;color:#262b21;padding:10px 0}`;
-function page(title, content) { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>${title} — Life Secrets</title><style>${pageStyle}</style></head><body><small>LIFE SECRETS / DIGITAL EDITION</small>${content}<p><a class="secondary" href="/">Back to Life Secrets</a></p></body></html>`; }
+function page(title, content) { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>${title} — O Portals</title><style>${pageStyle}</style></head><body><small>O PORTALS / LIFE SECRETS</small>${content}<p><a class="secondary" href="/">Back to Life Secrets</a></p></body></html>`; }
 const receiptPage = page('Your book', `<h1>Your next perspective.</h1><p id="message" role="status" aria-live="polite">Verifying your PayPal payment…</p><a id="download" hidden>Download your book ↓</a><form id="receipt" hidden><label for="transaction">PayPal transaction ID from your receipt</label><input id="transaction" name="transaction" maxlength="32" autocomplete="off" required pattern="[A-Za-z0-9]{8,32}"><button>Verify my purchase</button></form><p><small>Download links last 24 hours. Save the PDF to your device. Keep your PayPal receipt so you can verify your purchase again later.</small></p><script>
 const message=document.querySelector('#message'),form=document.querySelector('#receipt'),download=document.querySelector('#download'),input=document.querySelector('#transaction');
 const params=new URLSearchParams(location.search),tx=params.get('tx');history.replaceState(null,'',location.pathname);
@@ -39,7 +39,7 @@ export function createHandler(assets, fetcher = fetch) {
    }
    if(path==='/api/paypal/verify') {
     if(request.method!=='POST')return json({error:'Method not allowed.'},405);
-    if(request.headers.get('origin')!==SITE_URL)return json({error:'Request origin not allowed.'},403);
+    if(![SITE_URL,'https://oportals.com'].includes(url.origin) || request.headers.get('origin')!==url.origin)return json({error:'Request origin not allowed.'},403);
     if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'Unsupported content type.'},415);
     let data;try{data=JSON.parse(await limitedBody(request,1024));}catch(e){if(e instanceof PaymentError)throw e;throw new PaymentError('Invalid request.');}
     const payment=await verifyPDT(data?.transaction,env,fetcher);
@@ -61,6 +61,7 @@ export function createHandler(assets, fetcher = fetch) {
    if(request.method!=='GET' && request.method!=='HEAD')return json({error:'Method not allowed.'},405);
    if(path==='/paypal/return')return htmlResponse(receiptPage);
    if(path==='/Life-Secrets-Sample.pdf')return new Response(request.method==='HEAD'?null:fromBase64(assets.sample),{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'inline; filename="Life-Secrets-Sample.pdf"'}});
+   if(path==='/favicon.svg')return new Response('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#f1eee5"/><path d="M17 52V28a15 15 0 0130 0v24z" fill="none" stroke="#68734b" stroke-width="3"/><ellipse cx="32" cy="32" rx="8" ry="12" fill="none" stroke="#262b21" stroke-width="2"/></svg>',{headers:{...headers,'Content-Type':'image/svg+xml'}});
    if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
    if(path==='/')return htmlResponse(assets.home);
    return htmlResponse(page('Page not found','<h1>Page not found.</h1><p>Follow the link below to return to the book.</p>'),404);

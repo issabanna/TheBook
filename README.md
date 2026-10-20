@@ -1,6 +1,6 @@
-# Life Secrets / TheBook
+# O Portals / Life Secrets
 
-Source for the Life Secrets website and verified PayPal-to-PDF backend.
+Source for the O Portals website and verified PayPal-to-PDF backend.
 
 **Website:** https://life-secrets-guide.issawbanna.chatgpt.site
 

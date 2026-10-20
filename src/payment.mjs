@@ -101,7 +101,7 @@ export async function emailReceipt(payment, env, fetcher = fetch) {
   let response;
   try { response = await fetcher('https://api.resend.com/emails', {
     method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `life-secrets-${tx}` },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: 'Your Life Secrets book',
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: 'Your Life Secrets book — O Portals',
       text: `Thank you for purchasing Life Secrets for $15 USD.\n\nDownload your 30-page PDF:\n${link}\n\nThis private link expires seven days after purchase. Keep your PayPal receipt. You can return to ${SITE_URL}/paypal/return and use the transaction ID on your receipt to verify your purchase again.\n\nLife Secrets` }), signal: AbortSignal.timeout(10000)
   }); } catch { throw new PaymentError('Receipt email is temporarily unavailable.', 503); }
   if (!response.ok) throw new PaymentError('Receipt email is temporarily unavailable.', 503);
