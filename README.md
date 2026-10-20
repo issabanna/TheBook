@@ -11,7 +11,7 @@ The checkout stays closed until the required PayPal settings are connected. No r
 1. `/checkout` sends buyers to the existing PayPal payment link only when required server settings exist.
 2. PayPal returns the buyer to `/paypal/return?tx=TRANSACTION_ID`.
 3. The server asks PayPal's Payment Data Transfer (PDT) endpoint for the transaction details. It never trusts a browser's `paid`, `amount`, `status`, or email values.
-4. Only a completed payment for **$20.00 USD**, the configured recipient and product code **LIFE-SECRETS** unlocks a signed, 24-hour download URL.
+4. Only a completed payment for **$15.00 USD**, the configured recipient and product code **LIFE-SECRETS** unlocks a signed, 24-hour download URL.
 5. `/download` checks the signature, expiry and PayPal payment before decrypting and returning the PDF.
 6. Optionally, a verified IPN sends a seven-day download link to the PayPal payer's email via Resend. Email outages return an error so PayPal can retry.
 
@@ -21,7 +21,7 @@ Buyers can return to `/paypal/return` and enter the transaction ID from their re
 
 In the PayPal business account that owns payment link `CS8XK9B6XLU64`:
 
-1. Check that this link charges a fixed **20.00 USD**, with no additional shipping or tax that changes the gross total checked here. Confirm the item/SKU sent as `item_number` is **LIFE-SECRETS**. If the current link editor does not expose that field, use a supported PayPal button/integration that sends it, or adjust the backend to a verified product identifier actually present in a real sandbox response. Do not remove product verification to work around setup.
+1. Check that this link charges a fixed **15.00 USD**, with no additional shipping or tax that changes the gross total checked here. Confirm the item/SKU sent as `item_number` is **LIFE-SECRETS**. If the current link editor does not expose that field, use a supported PayPal button/integration that sends it, or adjust the backend to a verified product identifier actually present in a real sandbox response. Do not remove product verification to work around setup.
 2. Enable **Auto Return** and set the return URL to:
    `https://life-secrets-guide.issawbanna.chatgpt.site/paypal/return`
 3. Enable **Payment Data Transfer (PDT)** in Website Payment Preferences. Store the PDT identity token as the hosted secret `PAYPAL_PDT_TOKEN`. Set `PAYPAL_RECEIVER_EMAIL` to the primary receiving email shown in PayPal's verified transaction response. Never commit these values or put them in browser code.

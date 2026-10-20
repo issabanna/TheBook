@@ -5,13 +5,13 @@ import { assertPayment, verifyPDT, verifyIPN, issueToken, readToken, decryptBook
 import { createHandler } from '../src/worker.mjs';
 const tx='8AB12345CD678901E';
 const env={PAYPAL_PDT_TOKEN:'test-token',PAYPAL_RECEIVER_EMAIL:'seller@example.com',PAYPAL_ITEM_NUMBER:'LIFE-SECRETS',BOOK_ENCRYPTION_KEY:randomBytes(32).toString('base64'),DOWNLOAD_SIGNING_KEY:randomBytes(32).toString('base64')};
-function payment(changes={}) {return new URLSearchParams({payment_status:'Completed',mc_currency:'USD',mc_gross:'20.00',receiver_email:'seller@example.com',txn_id:tx,item_number:'LIFE-SECRETS',payer_email:'buyer@example.com',payment_date:'13:00:00 Oct 20, 2026 PDT',...changes});}
+function payment(changes={}) {return new URLSearchParams({payment_status:'Completed',mc_currency:'USD',mc_gross:'15.00',receiver_email:'seller@example.com',txn_id:tx,item_number:'LIFE-SECRETS',payer_email:'buyer@example.com',payment_date:'13:00:00 Oct 20, 2026 PDT',...changes});}
 function pdt(p=payment()){return 'SUCCESS\n'+p.toString().split('&').join('\n');}
 const okFetch=async()=>new Response(pdt());
 const post=(body,origin=SITE_URL)=>new Request(SITE_URL+'/api/paypal/verify',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(body)});
-test('only completed $20 USD payments for the configured seller and book qualify',()=>{
+test('only completed $15 USD payments for the configured seller and book qualify',()=>{
  assert.equal(assertPayment(payment(),env).get('txn_id'),tx);
- for(const bad of [{payment_status:'Pending'},{payment_status:'Refunded'},{payment_status:'Reversed'},{mc_gross:'2.00'},{mc_gross:'20.001'},{mc_gross:'20.00garbage'},{mc_currency:'EUR'},{receiver_email:'attacker@example.com'},{item_number:'OTHER'},{test_ipn:'1'}])assert.throws(()=>assertPayment(payment(bad),env));
+ for(const bad of [{payment_status:'Pending'},{payment_status:'Refunded'},{payment_status:'Reversed'},{mc_gross:'2.00'},{mc_gross:'15.001'},{mc_gross:'15.00garbage'},{mc_currency:'EUR'},{receiver_email:'attacker@example.com'},{item_number:'OTHER'},{test_ipn:'1'}])assert.throws(()=>assertPayment(payment(bad),env));
 });
 test('PDT ignores browser status and verifies the exact transaction with PayPal',async()=>{
  let calls=0;
@@ -19,7 +19,7 @@ test('PDT ignores browser status and verifies the exact transaction with PayPal'
  assert.equal(p.get('txn_id'),tx);assert.equal(calls,1);
  await assert.rejects(verifyPDT(tx,env,async()=>new Response('FAIL')));
  await assert.rejects(verifyPDT(tx,env,async()=>new Response(pdt(payment({txn_id:'OTHER1234567'})))));
- await assert.rejects(verifyPDT(tx,env,async()=>new Response(pdt()+'\nmc_gross=20.00')));
+ await assert.rejects(verifyPDT(tx,env,async()=>new Response(pdt()+'\nmc_gross=15.00')));
  await assert.rejects(verifyPDT(tx,env,async()=>new Response('error',{status:500})),e=>e.status===503);
  await assert.rejects(verifyPDT(tx,{},okFetch),e=>e.status===503);
 });
@@ -30,7 +30,7 @@ test('sandbox verification uses sandbox host; live mode rejects test payment',as
 test('IPN echoes the exact raw payload and rejects forged or duplicate-field notifications',async()=>{
  const raw=payment().toString();await verifyIPN(raw,env,async(url,opts)=>{assert.equal(url,'https://ipnpb.paypal.com/cgi-bin/webscr');assert.equal(opts.body,'cmd=_notify-validate&'+raw);return new Response('VERIFIED');});
  await assert.rejects(verifyIPN(raw,env,async()=>new Response('INVALID')));
- await assert.rejects(verifyIPN(raw+'&mc_gross=20.00',env,async()=>new Response('VERIFIED')));
+ await assert.rejects(verifyIPN(raw+'&mc_gross=15.00',env,async()=>new Response('VERIFIED')));
 });
 test('download tokens reject tampering, wrong signing keys and expiration',async()=>{
  const now=Math.floor(Date.now()/1000);const t=await issueToken(tx,env,now+50);assert.equal((await readToken(t,env)).tx,tx);

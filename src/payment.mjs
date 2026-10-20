@@ -18,7 +18,7 @@ export function validTransaction(tx) { return typeof tx === 'string' && /^[A-Z0-
 export function assertPayment(p, env, tx) {
   if (!env.PAYPAL_RECEIVER_EMAIL) throw new PaymentError('Checkout is not ready yet.', 503);
   if (p.get('payment_status') !== 'Completed') throw new PaymentError('Payment is not completed.', 403);
-  if (p.get('mc_currency') !== 'USD' || !/^20(?:\.00)?$/.test(p.get('mc_gross') || '')) throw new PaymentError('Payment does not match this book.', 403);
+  if (p.get('mc_currency') !== 'USD' || !/^15(?:\.00)?$/.test(p.get('mc_gross') || '')) throw new PaymentError('Payment does not match this book.', 403);
   if ((p.get('receiver_email') || '').toLowerCase() !== env.PAYPAL_RECEIVER_EMAIL.trim().toLowerCase()) throw new PaymentError('Payment recipient does not match.', 403);
   if (p.get('item_number') !== (env.PAYPAL_ITEM_NUMBER || 'LIFE-SECRETS')) throw new PaymentError('Payment product does not match.', 403);
   if (!validTransaction(p.get('txn_id')) || (tx && tx !== p.get('txn_id'))) throw new PaymentError('Transaction does not match.', 403);
@@ -102,7 +102,7 @@ export async function emailReceipt(payment, env, fetcher = fetch) {
   try { response = await fetcher('https://api.resend.com/emails', {
     method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `life-secrets-${tx}` },
     body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: 'Your Life Secrets book',
-      text: `Thank you for purchasing Life Secrets for $20 USD.\n\nDownload your 30-page PDF:\n${link}\n\nThis private link expires seven days after purchase. Keep your PayPal receipt. You can return to ${SITE_URL}/paypal/return and use the transaction ID on your receipt to verify your purchase again.\n\nLife Secrets` }), signal: AbortSignal.timeout(10000)
+      text: `Thank you for purchasing Life Secrets for $15 USD.\n\nDownload your 30-page PDF:\n${link}\n\nThis private link expires seven days after purchase. Keep your PayPal receipt. You can return to ${SITE_URL}/paypal/return and use the transaction ID on your receipt to verify your purchase again.\n\nLife Secrets` }), signal: AbortSignal.timeout(10000)
   }); } catch { throw new PaymentError('Receipt email is temporarily unavailable.', 503); }
   if (!response.ok) throw new PaymentError('Receipt email is temporarily unavailable.', 503);
   return { enabled: true, sent: true };
