@@ -17,7 +17,7 @@
     return safe.href;
   }
   function cleanReferrer() { try { const r = new URL(document.referrer); return r.origin + r.pathname; } catch { return ''; } }
-  function enable(withCookies = false) {
+  function enable(withCookies = true) {
     enabled = true;
     window['ga-disable-' + ID] = false;
     if (loaded) { if (withCookies) window.gtag('consent', 'update', { analytics_storage: 'granted' }); return; }
@@ -52,7 +52,7 @@
   const stored = preference();
   if (stored === 'accepted') enable(true);
   else if (stored === 'rejected') { window['ga-disable-' + ID] = true; clearCookies(); }
-  else enable(false);
+  else enable(true);
   if (banner) banner.hidden = true;
   document.getElementById('analytics-accept')?.addEventListener('click', () => choose('accepted'));
   document.getElementById('analytics-reject')?.addEventListener('click', () => choose('rejected'));
