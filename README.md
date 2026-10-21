@@ -84,3 +84,7 @@ Automated tests cover exact price/currency/product/recipient, incomplete/refunde
 ## Current live payment-link configuration
 
 The public PayPal link was inspected: it charges 15.00 USD and sends item_name `Life secrets book` without item_number. The deployed configuration uses PAYPAL_ITEM_NAME with that exact title. This overrides the SKU comparison; amount, currency, recipient, completed status and transaction matching still apply. The canonical return URL is now https://oportals.com/paypal/return. A real transaction is still required to verify PDT end to end.
+
+## Private shop concept
+
+`/Testing` is an owner-only concept page, protected using Sites-provided authenticated identity headers and the configured `PREVIEW_OWNER_EMAIL`. Anonymous visitors get a sign-in page; other users are denied. `PREVIEW_ENCRYPTION_KEY` decrypts its HTML only after authorization. Its plaintext in `private/Testing.html` is ignored by Git; the public repository and deployment bundle contain only ciphertext. This page has no analytics, no checkout, no public navigation link, and no indexable content. All products and prices are illustrative. Changing this preview requires re-encrypting with the matching hosted secret, then building and publishing.

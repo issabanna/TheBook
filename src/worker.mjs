@@ -27,6 +27,19 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url),path=url.pathname;
   try {
+   if(path==='/Testing' || path==='/Testing/') {
+    const privateHeaders={...headers,'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
+    const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
+    if(request.method!=='GET' && request.method!=='HEAD')return new Response('Method not allowed.',{status:405,headers:privateHeaders});
+    if(!env.PREVIEW_OWNER_EMAIL || !env.PREVIEW_ENCRYPTION_KEY)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
+    const viewer=request.headers.get('oai-authenticated-user-email');
+    const viewerId=request.headers.get('oai-authenticated-user-id');
+    if(!viewer || !viewerId)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>Sign in with the ChatGPT account that owns this site to view the collection concept.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p>After signing in, <a class="secondary" href="/Testing">open the private preview again</a>.</p>'),401);
+    if(viewer.trim().toLowerCase()!==env.PREVIEW_OWNER_EMAIL.trim().toLowerCase())return privatePage(page('Private preview','<h1>This is a private preview.</h1><p>This page is available only to the site owner.</p>'),403);
+    if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
+    const bytes=await decryptBook(assets.testing,env.PREVIEW_ENCRYPTION_KEY);
+    return new Response(bytes,{headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
+   }
    if(path==='/analytics.js' && request.method==='GET')return new Response(assets.analytics,{headers:{...headers,'Content-Type':'text/javascript; charset=utf-8'}});
    if(path==='/privacy' && request.method==='GET')return htmlResponse(page('Privacy', '<h1>Privacy &amp; analytics.</h1><p>OPortals.com uses essential payment and download functions to provide the book. PayPal processes payments. Our contact form opens your email app; it does not send your question to Google Analytics.</p><h2>Optional analytics</h2><p>Google Analytics 4 measures visits and clicks and uses analytics cookies by default, unless you reject tracking in Privacy settings. It can collect identifiers, device/browser information and approximate location. Google processes this data on our behalf; processing may occur outside your country. We do not send your contact message, email address, PayPal transaction ID or download token in the analytics events we implement. Analytics is not loaded on payment-return or download pages.</p><p>We keep your analytics choice on this device for up to 180 days. Google Analytics cookies can last up to two years; their lifetimes can be renewed by visits. Advertising storage, Google signals and advertising personalization are disabled in our tag configuration. Your Analytics property settings may also affect data retention.</p><h2>Your choice</h2><p>Analytics is enabled by default. You can reject tracking entirely or keep analytics enabled. To change your choice or withdraw consent, use Privacy settings in the homepage footer. Rejecting clears analytics cookies this site can access and reloads the page if needed. This does not delete analytics data already received by Google.</p><p><a class="secondary" href="https://policies.google.com/privacy" rel="noopener noreferrer">Google privacy information</a></p><p>For privacy questions or requests, use our <a class="secondary" href="/#contact">contact form</a>.</p>'));
    if(path==='/api/status' && request.method==='GET')return json({checkoutReady:ready(env),emailEnabled:emailReady(env)});
@@ -64,7 +77,7 @@ export function createHandler(assets, fetcher = fetch) {
    if(path==='/paypal/return')return htmlResponse(receiptPage);
    if(path==='/Life-Secrets-Sample.pdf')return new Response(request.method==='HEAD'?null:fromBase64(assets.sample),{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'inline; filename="Life-Secrets-Sample.pdf"'}});
    if(path==='/favicon.svg' || path==='/oportals-mark.svg')return new Response(assets.logo,{headers:{...headers,'Content-Type':'image/svg+xml'}});
-   if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
+   if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /Testing\nDisallow: /testing\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
    if(path==='/')return htmlResponse(assets.home);
    return htmlResponse(page('Page not found','<h1>Page not found.</h1><p>Follow the link below to return to the book.</p>'),404);
   } catch(e) {
