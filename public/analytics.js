@@ -61,7 +61,7 @@
     if (!enabled || !window.gtag || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
     event.preventDefault(); let navigated = false;
     const navigate = () => { if (!navigated) { navigated = true; location.assign('/checkout'); } };
-    window.gtag('event', 'begin_checkout', { currency: 'USD', value: 15, items: [{ item_id: 'LIFE-SECRETS', item_name: 'Life Secrets', price: 15, quantity: 1 }], event_callback: navigate, event_timeout: 400 });
+    window.gtag('event', 'begin_checkout', { cta_location: link.dataset?.cta || 'unspecified', currency: 'USD', value: 15, items: [{ item_id: 'LIFE-SECRETS', item_name: 'Life Secrets', price: 15, quantity: 1 }], event_callback: navigate, event_timeout: 400 });
     setTimeout(navigate, 450);
   }));
   document.querySelectorAll('a[href="Life-Secrets-Sample.pdf"]').forEach(link => link.addEventListener('click', () => {
