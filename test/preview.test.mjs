@@ -26,3 +26,25 @@ test('missing settings and incorrect keys fail closed; public homepage remains p
  assert.equal(await (await handler(new Request(origin+'/'),env)).text(),'Public homepage');
  assert.equal((await handler(new Request(origin+'/Testing',{method:'POST'}),env)).status,405);
 });
+
+test('private review PDFs require the owner and use an independent content key',async()=>{
+ const newKey=randomBytes(32).toString('base64');
+ const k=await crypto.subtle.importKey('raw',Buffer.from(newKey,'base64'),'AES-GCM',false,['encrypt']);
+ async function seal(text){const iv=crypto.getRandomValues(new Uint8Array(12));const bytes=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(text));return {keyEnv:'PREVIEW_CONTENT_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(bytes).toString('base64')}}
+ const fixture={...assets,testing:await seal('<h1>Completed private books</h1>'),completedBooks:{'art-of-attention.pdf':await seal('%PDF-1.4\nprivate review copy\n%%EOF')}};
+ const h=createHandler(fixture),config={...env,PREVIEW_CONTENT_KEY:newKey};
+ const auth={'oai-authenticated-user-id':'owner','oai-authenticated-user-email':'owner@example.com'};
+ const url=origin+'/Testing/books/art-of-attention.pdf';
+ assert.equal((await h(new Request(url),config)).status,401);
+ assert.equal((await h(new Request(url,{headers:{...auth,'oai-authenticated-user-email':'someone@example.com'}}),config)).status,403);
+ const pdf=await h(new Request(url,{headers:auth}),config);
+ assert.equal(pdf.status,200);assert.equal(pdf.headers.get('Content-Type'),'application/pdf');assert.equal(pdf.headers.get('Cache-Control'),'private, no-store');assert.match(pdf.headers.get('Content-Disposition'),/^inline;/);assert.match(pdf.headers.get('Content-Security-Policy'),/frame-ancestors 'self'/);assert.equal(pdf.headers.get('X-Frame-Options'),'SAMEORIGIN');assert.match(await pdf.text(),/^%PDF-1.4/);
+ const attachment=await h(new Request(url+'?download=1',{headers:auth}),config);assert.match(attachment.headers.get('Content-Disposition'),/^attachment; filename="art-of-attention.pdf"/);
+ const head=await h(new Request(url,{method:'HEAD',headers:auth}),config);assert.equal(head.status,200);assert.equal(await head.text(),'');assert.equal(head.headers.get('Content-Type'),'application/pdf');
+ assert.equal((await h(new Request(origin+'/Testing/books/not-a-book.pdf',{headers:auth}),config)).status,404);
+ assert.equal((await h(new Request(url,{headers:auth,method:'POST'}),config)).status,405);
+ assert.equal((await h(new Request(url,{headers:auth}),{...config,PREVIEW_CONTENT_KEY:randomBytes(32).toString('base64')})).status,503);
+ assert.match(await(await h(new Request(origin+'/Testing',{headers:auth}),config)).text(),/Completed private books/);
+ // The preserved Version 1 ciphertext still selects the old key when the new key is present.
+ const old=createHandler(assets);assert.match(await(await old(new Request(origin+'/Testing',{headers:auth}),config)).text(),/Private catalogue test/);
+});

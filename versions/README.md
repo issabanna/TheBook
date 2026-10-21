@@ -7,3 +7,8 @@
 - Encrypted page: versions/testing-v1.encrypted.json
 - Uses the existing PREVIEW_ENCRYPTION_KEY. If that key is rotated, re-encrypt this checkpoint with the new key before deploying it.
 - To roll back Testing only, restore this encrypted page to src/encrypted-preview.json, decrypt it into ignored private/Testing.html using the runtime preview key through hidden stdin, rebuild, and publish. Preserve public/index.html, checkout, and all other live functionality.
+
+## Preview encryption compatibility
+- Version 1 continues to use PREVIEW_ENCRYPTION_KEY; preserve that runtime secret.
+- Current preview pages with keyEnv set to PREVIEW_CONTENT_KEY and completed preview PDFs use PREVIEW_CONTENT_KEY.
+- The handler selects the key from the encrypted page metadata, so the preserved Version 1 snapshot remains restorable without changing its key.

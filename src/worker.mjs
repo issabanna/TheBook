@@ -27,17 +27,30 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url),path=url.pathname;
   try {
-   if(path==='/Testing' || path==='/Testing/') {
+   if(path==='/Testing' || path==='/Testing/' || path.startsWith('/Testing/books/')) {
     const privateHeaders={...headers,'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     if(request.method!=='GET' && request.method!=='HEAD')return new Response('Method not allowed.',{status:405,headers:privateHeaders});
-    if(!env.PREVIEW_OWNER_EMAIL || !env.PREVIEW_ENCRYPTION_KEY)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
+    const previewKey=assets.testing?.keyEnv==='PREVIEW_CONTENT_KEY'?env.PREVIEW_CONTENT_KEY:env.PREVIEW_ENCRYPTION_KEY;
+    if(!env.PREVIEW_OWNER_EMAIL || !previewKey)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
     if(!viewer || !viewerId)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>Sign in with the ChatGPT account that owns this site to view the collection concept.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p>After signing in, <a class="secondary" href="/Testing">open the private preview again</a>.</p>'),401);
     if(viewer.trim().toLowerCase()!==env.PREVIEW_OWNER_EMAIL.trim().toLowerCase())return privatePage(page('Private preview','<h1>This is a private preview.</h1><p>This page is available only to the site owner.</p>'),403);
+    if(path.startsWith('/Testing/books/')) {
+     const name=path.slice('/Testing/books/'.length);
+     const isExisting=name==='life-secrets.pdf';
+     const file=isExisting?assets.book:Object.hasOwn(assets.completedBooks||{},name)?assets.completedBooks[name]:null;
+     if(!file)return new Response('Book not found.',{status:404,headers:privateHeaders});
+     const bookKey=isExisting?env.BOOK_ENCRYPTION_KEY:env.PREVIEW_CONTENT_KEY;
+     if(!bookKey)return privatePage(page('Book unavailable','<h1>This preview book is not available yet.</h1>'),503);
+     const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':headers['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
+     if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});
+     const bytes=await decryptBook(file,bookKey);
+     return new Response(bytes,{headers:pdfHeaders});
+    }
     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
-    const bytes=await decryptBook(assets.testing,env.PREVIEW_ENCRYPTION_KEY);
+    const bytes=await decryptBook(assets.testing,previewKey);
     return new Response(bytes,{headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
    }
    if(path==='/analytics.js' && request.method==='GET')return new Response(assets.analytics,{headers:{...headers,'Content-Type':'text/javascript; charset=utf-8'}});
