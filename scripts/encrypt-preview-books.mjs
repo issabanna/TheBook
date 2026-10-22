@@ -1,5 +1,7 @@
 import {readFile,writeFile,readdir,mkdir} from 'node:fs/promises';
 import readline from 'node:readline';
+import {execFileSync} from 'node:child_process';
+execFileSync('python3',[new URL('./build-four-page-samples.py',import.meta.url).pathname],{stdio:['ignore','inherit','inherit']});
 console.log('Ready for preview encryption JSON on stdin (input is hidden).');
 const rl=readline.createInterface({input:process.stdin});
 for await(const line of rl){
