@@ -48,7 +48,7 @@ export function createHandler(assets, fetcher = fetch) {
     const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'; font-src 'self' data:",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     if(request.method!=='GET' && request.method!=='HEAD' && !(['/Testing/api/events','/Testing/api/contact','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)&&request.method==='POST'))return new Response('Method not allowed.',{status:405,headers:privateHeaders});
-    const previewKey=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY'].includes(assets.testing?.keyEnv)?env[assets.testing.keyEnv]:env.PREVIEW_ENCRYPTION_KEY;
+    const previewKey=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(assets.testing?.keyEnv)?env[assets.testing.keyEnv]:env.PREVIEW_ENCRYPTION_KEY;
     if(!previewKey)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
@@ -77,7 +77,7 @@ export function createHandler(assets, fetcher = fetch) {
     if(path.startsWith('/Testing/media/')){
      const name=path.slice('/Testing/media/'.length),file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
      if(!file)return new Response('Image not found',{status:404,headers:privateHeaders});
-     const key=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY'].includes(file.keyEnv)?env[file.keyEnv]:null;
+     const key=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(file.keyEnv)?env[file.keyEnv]:null;
      if(!key)return new Response('Image unavailable',{status:503,headers:privateHeaders});
      const bytes=request.method==='HEAD'?null:await decryptBook(file,key);
      return new Response(bytes,{headers:{...privateHeaders,'Content-Type':'image/webp'}});
@@ -92,7 +92,7 @@ export function createHandler(assets, fetcher = fetch) {
      const isExisting=name==='life-secrets.pdf'&&!Object.hasOwn(assets.completedBooks||{},name);
      const file=isExisting?assets.book:Object.hasOwn(assets.completedBooks||{},name)?assets.completedBooks[name]:null;
      if(!file)return new Response('Book not found.',{status:404,headers:privateHeaders});
-     const bookKey=isExisting?env.BOOK_ENCRYPTION_KEY:['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY'].includes(file.keyEnv)?env[file.keyEnv]:env.PREVIEW_CONTENT_KEY;
+     const bookKey=isExisting?env.BOOK_ENCRYPTION_KEY:['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(file.keyEnv)?env[file.keyEnv]:env.PREVIEW_CONTENT_KEY;
      if(!bookKey)return privatePage(page('Book unavailable','<h1>This preview book is not available yet.</h1>'),503);
      const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':privateHeaders['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
      if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});
