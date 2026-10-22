@@ -7,6 +7,7 @@ for await(const line of rl){
  const imported=await crypto.subtle.importKey('raw',Buffer.from(key,'base64'),'AES-GCM',false,['encrypt']);
  async function encrypt(path){const iv=crypto.getRandomValues(new Uint8Array(12));const bytes=await readFile(new URL('../'+path,import.meta.url));const result=await crypto.subtle.encrypt({name:'AES-GCM',iv},imported,bytes);return {keyEnv:'PREVIEW_V3_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(result).toString('base64')}}
  const books={};for(const name of ['life-secrets.pdf','life-secrets-sample.pdf','sneakpeak-ideas.pdf','art-of-attention.pdf','man-and-people-guide.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf'])books[name]=await encrypt('private/books/'+name);
+ for(const stem of ["the-philosopher-manager", "lead-without-the-noise", "time-for-what-matters", "stand-out-for-something"])for(const suffix of ['.pdf','-sample.pdf'])books[stem+suffix]=await encrypt('private/books/'+stem+suffix);
  const media={};for(const name of await readdir(new URL('../private/books/web-media/',import.meta.url)))media[name]=await encrypt('private/books/web-media/'+name);await writeFile(new URL('../src/encrypted-preview-media.json',import.meta.url),JSON.stringify(media));
  await writeFile(new URL('../src/encrypted-preview-books.json',import.meta.url),JSON.stringify(books));
  await writeFile(new URL('../src/encrypted-preview.json',import.meta.url),JSON.stringify({...await encrypt('private/Testing.html'),publicPreview:true}));

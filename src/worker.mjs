@@ -24,7 +24,7 @@ async function limitedBody(request, limit = 16384) {
   while (true) { const {done,value}=await reader.read();if(done)break;total+=value.length;if(total>limit){await reader.cancel();throw new PaymentError('Request too large.',413);}chunks.push(value); }
   const bytes=new Uint8Array(total);let offset=0;for(const part of chunks){bytes.set(part,offset);offset+=part.length;}return new TextDecoder().decode(bytes);
 }
-const downloadCatalogue=[{id:'sneakpeak-ideas',title:'SneakPeak Ideas — free collection'},{id:'life-secrets',title:'Life Secrets'},{id:'art-of-attention',title:'The Art of Attention'},{id:'man-and-people-guide',title:'Man and People — illustrated companion'}];
+const downloadCatalogue=[{"id": "the-philosopher-manager", "title": "The Philosopher Manager"},{"id": "lead-without-the-noise", "title": "Lead Without the Noise"},{"id": "time-for-what-matters", "title": "Time for What Matters"},{"id": "stand-out-for-something", "title": "Stand Out for Something"},{id:'sneakpeak-ideas',title:'SneakPeak Ideas — free collection'},{id:'life-secrets',title:'Life Secrets'},{id:'art-of-attention',title:'The Art of Attention'},{id:'man-and-people-guide',title:'Man and People — illustrated companion'}];
 const trackedFiles=Object.fromEntries(downloadCatalogue.flatMap(b=>[[b.id+'.pdf',{bookId:b.id,kind:'full'}],[b.id+'-sample.pdf',{bookId:b.id,kind:'sample'}]]));
 async function captureDownload(env,name){
  const item=trackedFiles[name];if(!item)return;
@@ -52,7 +52,7 @@ export function createHandler(assets, fetcher = fetch) {
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
     const isOwner=!!viewerId&&!!viewer&&!!env.PREVIEW_OWNER_EMAIL&&viewer.trim().toLowerCase()===env.PREVIEW_OWNER_EMAIL.trim().toLowerCase();
-    const publicFiles=new Set(['sneakpeak-ideas.pdf','life-secrets-sample.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf']);
+    const publicFiles=new Set(["the-philosopher-manager-sample.pdf","lead-without-the-noise-sample.pdf","time-for-what-matters-sample.pdf","stand-out-for-something-sample.pdf",'sneakpeak-ideas.pdf','life-secrets-sample.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf']);
     const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/metrics','/Testing/downloads','/Testing/downloads.json'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
     if(ownerOnly&&!isOwner){
      if(!viewer||!viewerId)return privatePage(page('Owner access','<h1>Owner access required.</h1><p>The storefront and free samples are open to everyone. Reports and full paid-book review files require the owner account.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a href="/Testing">Back to the bookstore</a></p>'),401);

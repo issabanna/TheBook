@@ -1,5 +1,5 @@
 // Storefront-preview measurements are aggregates, never payment records or personal profiles.
-export const previewBookSlugs=['life-secrets','art-of-attention','man-and-people','sneakpeak-ideas','the-space-you-keep','the-unfinished-path','meditations','the-enchiridion','the-republic','beyond-good-and-evil'];
+export const previewBookSlugs=["sneakpeak-ideas", "life-secrets", "art-of-attention", "the-philosopher-manager", "lead-without-the-noise", "time-for-what-matters", "stand-out-for-something", "man-and-people"];
 export const previewEventNames=['home_view','catalog_view','book_view','sample_open','sample_page','purchase_click','checkout_preview'];
 export async function recordPreviewEvent(request,env){
  if(!env.DB)return new Response(JSON.stringify({error:'Measurement is unavailable.'}),{status:503});
