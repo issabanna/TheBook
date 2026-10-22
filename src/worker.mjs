@@ -1,3 +1,4 @@
+import {submitContact,contactInbox,processContactQueue,deleteContact} from './contact.mjs';
 import {previewBookSlugs,recordPreviewEvent,previewMetrics} from './testing-events.mjs';
 import { SITE_URL, PAYPAL_LINK, PaymentError, ready, emailReady, verifyPDT, verifyIPN, assertPayment, issueToken, readToken, decryptBook, fromBase64, emailReceipt } from './payment.mjs';
 // Build injects the public assets and encrypted paid book. No plaintext paid PDF is published.
@@ -46,17 +47,25 @@ export function createHandler(assets, fetcher = fetch) {
    if(path==='/Testing' || path.startsWith('/Testing/')) {
     const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'; font-src 'self' data:",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
-    if(request.method!=='GET' && request.method!=='HEAD' && !(path==='/Testing/api/events'&&request.method==='POST'))return new Response('Method not allowed.',{status:405,headers:privateHeaders});
+    if(request.method!=='GET' && request.method!=='HEAD' && !(['/Testing/api/events','/Testing/api/contact','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)&&request.method==='POST'))return new Response('Method not allowed.',{status:405,headers:privateHeaders});
     const previewKey=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY'].includes(assets.testing?.keyEnv)?env[assets.testing.keyEnv]:env.PREVIEW_ENCRYPTION_KEY;
     if(!previewKey)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
     const isOwner=!!viewerId&&!!viewer&&!!env.PREVIEW_OWNER_EMAIL&&viewer.trim().toLowerCase()===env.PREVIEW_OWNER_EMAIL.trim().toLowerCase();
     const publicFiles=new Set(["the-philosopher-manager-sample.pdf","lead-without-the-noise-sample.pdf","time-for-what-matters-sample.pdf","stand-out-for-something-sample.pdf",'sneakpeak-ideas.pdf','life-secrets-sample.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf']);
-    const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/metrics','/Testing/downloads','/Testing/downloads.json'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
+    const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/metrics','/Testing/downloads','/Testing/downloads.json','/Testing/contact-inbox','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
     if(ownerOnly&&!isOwner){
      if(!viewer||!viewerId)return privatePage(page('Owner access','<h1>Owner access required.</h1><p>The storefront and free samples are open to everyone. Reports and full paid-book review files require the owner account.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a href="/Testing">Back to the bookstore</a></p>'),401);
      return privatePage(page('Owner access','<h1>Owner access required.</h1><p><a href="/Testing">Back to the bookstore</a></p>'),403);
+    }
+    if(path==='/Testing/api/contact'||path==='/Testing/api/contact/deliver'||path==='/Testing/api/contact/delete'){
+     if(request.method!=='POST')return new Response('Method not allowed',{status:405,headers:privateHeaders});
+     const result=path.endsWith('/deliver')?await processContactQueue(request,env,fetcher):path.endsWith('/delete')?await deleteContact(request,env):await submitContact(request,env,fetcher);
+     return new Response(result.body,{status:result.status,headers:{...privateHeaders,'Content-Type':'application/json'}});
+    }
+    if(path==='/Testing/contact-inbox'){
+     const result=await contactInbox(env);return new Response(request.method==='HEAD'?null:result.body,{status:result.status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }
     if(path==='/Testing/api/events'){
      if(request.method!=='POST')return new Response('Method not allowed',{status:405,headers:privateHeaders});
