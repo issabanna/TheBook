@@ -23,11 +23,26 @@ async function limitedBody(request, limit = 16384) {
   while (true) { const {done,value}=await reader.read();if(done)break;total+=value.length;if(total>limit){await reader.cancel();throw new PaymentError('Request too large.',413);}chunks.push(value); }
   const bytes=new Uint8Array(total);let offset=0;for(const part of chunks){bytes.set(part,offset);offset+=part.length;}return new TextDecoder().decode(bytes);
 }
+const downloadCatalogue=[{id:'life-secrets',title:'Life Secrets'},{id:'art-of-attention',title:'The Art of Attention'},{id:'man-and-people-guide',title:'Man and People — illustrated companion'}];
+const trackedFiles=Object.fromEntries(downloadCatalogue.flatMap(b=>[[b.id+'.pdf',{bookId:b.id,kind:'full'}],[b.id+'-sample.pdf',{bookId:b.id,kind:'sample'}]]));
+async function captureDownload(env,name){
+ const item=trackedFiles[name];if(!item)return;
+ if(!env.DB)throw new PaymentError('Download recording is temporarily unavailable. Please try again shortly.',503);
+ await env.DB.prepare('INSERT INTO download_counts (book_id, kind, download_count, updated_at) VALUES (?, ?, 1, ?) ON CONFLICT(book_id, kind) DO UPDATE SET download_count = download_counts.download_count + 1, updated_at = excluded.updated_at').bind(item.bookId,item.kind,new Date().toISOString()).run();
+}
+async function downloadReport(env){
+ if(!env.DB)throw new PaymentError('Download reporting is not available yet.',503);
+ const {results}=await env.DB.prepare('SELECT book_id, kind, download_count, updated_at FROM download_counts ORDER BY book_id, kind').all();
+ return downloadCatalogue.map(b=>{const rows=results.filter(r=>r.book_id===b.id);return {...b,sample:rows.find(r=>r.kind==='sample')?.download_count||0,full:rows.find(r=>r.kind==='full')?.download_count||0,lastDownload:rows.map(r=>r.updated_at).sort().at(-1)||null}});
+}
+function reportPage(rows){
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Book downloads — OPortals.com</title><style>body{font:15px/1.6 Arial,sans-serif;color:#141414;margin:40px auto;padding:0 6%;max-width:1000px}h1{font-size:42px;line-height:1.1;letter-spacing:-1.5px}a{color:#0766ff}table{border-collapse:collapse;width:100%;margin:30px 0}th,td{text-align:left;border-bottom:1px solid #e4e8ef;padding:14px 10px}th{font-size:12px;color:#626975}td:nth-child(n+2){font-variant-numeric:tabular-nums}small,p{color:#626975}.table{overflow:auto}.total{font-size:23px;font-weight:bold;color:#0766ff}@media(max-width:600px){body{margin-top:25px}h1{font-size:34px}th,td{font-size:12px;padding:12px 8px}}</style></head><body><a href="/Testing">← Back to the private bookstore</a><h1>Book downloads.</h1><p>Private owner report · Testing downloads only</p><div class="total">${rows.reduce((n,r)=>n+r.sample+r.full,0)} recorded download requests</div><div class="table"><table><thead><tr><th>Book</th><th>Free samples</th><th>Full books</th><th>Last recorded (UTC)</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.title}</td><td>${r.sample}</td><td>${r.full}</td><td>${r.lastDownload?r.lastDownload.replace('T',' ').slice(0,19):'—'}</td></tr>`).join('')}</tbody></table></div><p><small>Counts begin when recording is enabled. A count means the server served an explicit PDF download request; it does not prove that the file was saved, read, or downloaded by a unique person. Repeat downloads count again. Inline previews, HEAD requests, and recognised prefetches do not count. Owner test downloads count too. Public checkout and public sample routes are outside this private report.</small></p><p><small>No email addresses, IP addresses, or personal identifiers are stored in these counters. Other titles will appear here when downloadable editions are available.</small></p><a href="/Testing/downloads.json">View counts as JSON ↗</a></body></html>`;
+}
 export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url),path=url.pathname;
   try {
-   if(path==='/Testing' || path==='/Testing/' || path.startsWith('/Testing/books/')) {
+   if(path==='/Testing' || path==='/Testing/' || path.startsWith('/Testing/books/') || path==='/Testing/downloads' || path==='/Testing/downloads.json') {
     const privateHeaders={...headers,'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     if(request.method!=='GET' && request.method!=='HEAD')return new Response('Method not allowed.',{status:405,headers:privateHeaders});
@@ -37,6 +52,11 @@ export function createHandler(assets, fetcher = fetch) {
     const viewerId=request.headers.get('oai-authenticated-user-id');
     if(!viewer || !viewerId)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>Sign in with the ChatGPT account that owns this site to view the collection concept.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p>After signing in, <a class="secondary" href="/Testing">open the private preview again</a>.</p>'),401);
     if(viewer.trim().toLowerCase()!==env.PREVIEW_OWNER_EMAIL.trim().toLowerCase())return privatePage(page('Private preview','<h1>This is a private preview.</h1><p>This page is available only to the site owner.</p>'),403);
+    if(path==='/Testing/downloads' || path==='/Testing/downloads.json'){
+     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
+     const report=await downloadReport(env);
+     return new Response(path.endsWith('.json')?JSON.stringify({scope:'private-testing',books:report}):reportPage(report),{headers:{...privateHeaders,'Content-Type':path.endsWith('.json')?'application/json':'text/html; charset=utf-8'}});
+    }
     if(path.startsWith('/Testing/books/')) {
      const name=path.slice('/Testing/books/'.length);
      const isExisting=name==='life-secrets.pdf';
@@ -47,6 +67,8 @@ export function createHandler(assets, fetcher = fetch) {
      const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':headers['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
      if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});
      const bytes=await decryptBook(file,bookKey);
+     const purpose=(request.headers.get('purpose')||'')+' '+(request.headers.get('sec-purpose')||'');
+     if(url.searchParams.get('download')==='1' && !purpose.toLowerCase().includes('prefetch'))await captureDownload(env,name);
      return new Response(bytes,{headers:pdfHeaders});
     }
     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});

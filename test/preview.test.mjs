@@ -1,3 +1,4 @@
+import {createDownloadDB} from './helpers/download-db.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
@@ -32,7 +33,7 @@ test('private review PDFs require the owner and use an independent content key',
  const k=await crypto.subtle.importKey('raw',Buffer.from(newKey,'base64'),'AES-GCM',false,['encrypt']);
  async function seal(text){const iv=crypto.getRandomValues(new Uint8Array(12));const bytes=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(text));return {keyEnv:'PREVIEW_CONTENT_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(bytes).toString('base64')}}
  const fixture={...assets,testing:await seal('<h1>Completed private books</h1>'),completedBooks:{'art-of-attention.pdf':await seal('%PDF-1.4\nprivate review copy\n%%EOF')}};
- const h=createHandler(fixture),config={...env,PREVIEW_CONTENT_KEY:newKey};
+ const h=createHandler(fixture),config={...env,PREVIEW_CONTENT_KEY:newKey,DB:createDownloadDB()};
  const auth={'oai-authenticated-user-id':'owner','oai-authenticated-user-email':'owner@example.com'};
  const url=origin+'/Testing/books/art-of-attention.pdf';
  assert.equal((await h(new Request(url),config)).status,401);
