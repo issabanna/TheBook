@@ -14,6 +14,6 @@ for await(const line of rl){
  await mkdir(new URL('../src/encrypted-preview-books/',import.meta.url),{recursive:true});
  const manifest={};for(const [name,record]of Object.entries(books)){if(record.assetFile){manifest[name]=record;continue}const assetFile='encrypted-preview-books/'+name+'.json';await writeFile(new URL('../src/'+assetFile,import.meta.url),JSON.stringify(record));manifest[name]={keyEnv:record.keyEnv,assetFile};}
  await writeFile(new URL('../src/encrypted-preview-books.json',import.meta.url),JSON.stringify(manifest));
- await writeFile(new URL('../src/encrypted-preview.json',import.meta.url),JSON.stringify({...await encrypt('private/Testing.html'),publicPreview:true,temporaryDownloads:JSON.parse(await readFile(new URL('../src/encrypted-preview.json',import.meta.url),'utf8')).temporaryDownloads===true}));
+ await writeFile(new URL('../src/encrypted-preview.json',import.meta.url),JSON.stringify({...await encrypt('private/Testing.html'),publicPreview:true,liveStorefront:JSON.parse(await readFile(new URL('../src/encrypted-preview.json',import.meta.url),'utf8')).liveStorefront===true,temporaryDownloads:JSON.parse(await readFile(new URL('../src/encrypted-preview.json',import.meta.url),'utf8')).temporaryDownloads===true}));
  console.log('Private page, completed books, and samples encrypted.');rl.close();break;
 }

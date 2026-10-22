@@ -49,6 +49,8 @@
       if (loaded) location.reload();
     }
   }
+  document.getElementById('measurement-accept')?.addEventListener('click', () => choose('accepted'));
+  document.getElementById('measurement-reject')?.addEventListener('click', () => choose('rejected'));
   const stored = preference();
   if (stored === 'accepted') enable(true);
   else if (stored === 'rejected') { window['ga-disable-' + ID] = true; clearCookies(); }
