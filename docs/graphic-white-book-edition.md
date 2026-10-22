@@ -1,0 +1,9 @@
+# OPortals graphic edition on white paper
+
+The cover reference was used for bold editorial typography and a single memorable graphic symbol, without copying its titles or compositions. Attention uses an eye interrupted by competing signals; Life Secrets uses an open door becoming a stair; Man and People uses distinct profiles meeting a shared line. SneakPeak Ideas uses overlapping folded pages. The covers and interiors use the same black type and limited graphic accents on white paper.
+
+The tinted page washes and full-width colored title bands have been removed. Main reading titles use DejaVu Sans Bold with a short vermilion rule, clear hierarchy, and topic-specific infographics. Color belongs to the diagrams, symbols and small headings. Existing body text, fictional examples, exercises, source credits and contents structure remain. The page counts remain 32, 31, 44 and 19. Paid-book contents links, source text preservation, text bounds, all rendered pages, and representative full-size spreads were checked. The three eight-page samples and website cover/page images match the revised editions.
+
+The free sampler retains actual paid-book excerpts. Its four separately labelled development previews have their page paper normalized to white while retaining source text and diagrams; their original development PDFs are otherwise unchanged. The sampler's links and source text were checked, along with the revised paid-book excerpt appearance. White edge-background pixels were checked on every page of the four delivered PDFs.
+
+The public homepage, original Life Secrets file currently on sale, public sample and payment code are unchanged. The previous colorful infographic PDFs are retained locally under private/checkpoints/infographic-color-band-edition and hosted version 73 remains available for rollback. These remain font-embedded digital PDFs, without a PDF/UA or print PDF/X certification claim.
