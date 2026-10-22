@@ -1,3 +1,4 @@
+import {previewBookSlugs,recordPreviewEvent,previewMetrics} from './testing-events.mjs';
 import { SITE_URL, PAYPAL_LINK, PaymentError, ready, emailReady, verifyPDT, verifyIPN, assertPayment, issueToken, readToken, decryptBook, fromBase64, emailReceipt } from './payment.mjs';
 // Build injects the public assets and encrypted paid book. No plaintext paid PDF is published.
 const headers = {
@@ -42,16 +43,31 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url),path=url.pathname;
   try {
-   if(path==='/Testing' || path==='/Testing/' || path.startsWith('/Testing/books/') || path==='/Testing/downloads' || path==='/Testing/downloads.json') {
-    const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
+   if(path==='/Testing' || path.startsWith('/Testing/')) {
+    const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'; font-src 'self' data:",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
-    if(request.method!=='GET' && request.method!=='HEAD')return new Response('Method not allowed.',{status:405,headers:privateHeaders});
-    const previewKey=assets.testing?.keyEnv==='PREVIEW_CONTENT_KEY'?env.PREVIEW_CONTENT_KEY:env.PREVIEW_ENCRYPTION_KEY;
+    if(request.method!=='GET' && request.method!=='HEAD' && !(path==='/Testing/api/events'&&request.method==='POST'))return new Response('Method not allowed.',{status:405,headers:privateHeaders});
+    const previewKey=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY'].includes(assets.testing?.keyEnv)?env[assets.testing.keyEnv]:env.PREVIEW_ENCRYPTION_KEY;
     if(!env.PREVIEW_OWNER_EMAIL || !previewKey)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
     if(!viewer || !viewerId)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>Sign in with the ChatGPT account that owns this site to view the collection concept.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p>After signing in, <a class="secondary" href="/Testing">open the private preview again</a>.</p>'),401);
     if(viewer.trim().toLowerCase()!==env.PREVIEW_OWNER_EMAIL.trim().toLowerCase())return privatePage(page('Private preview','<h1>This is a private preview.</h1><p>This page is available only to the site owner.</p>'),403);
+    if(path==='/Testing/api/events'){
+     if(request.method!=='POST')return new Response('Method not allowed',{status:405,headers:privateHeaders});
+     const result=await recordPreviewEvent(request,env);return new Response(result.body,{status:result.status,headers:{...privateHeaders,'Content-Type':'application/json'}});
+    }
+    if(path==='/Testing/metrics'){
+     const result=await previewMetrics(env);return new Response(request.method==='HEAD'?null:result.body,{status:result.status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
+    }
+    if(path.startsWith('/Testing/media/')){
+     const name=path.slice('/Testing/media/'.length),file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
+     if(!file)return new Response('Image not found',{status:404,headers:privateHeaders});
+     const key=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY'].includes(file.keyEnv)?env[file.keyEnv]:null;
+     if(!key)return new Response('Image unavailable',{status:503,headers:privateHeaders});
+     const bytes=request.method==='HEAD'?null:await decryptBook(file,key);
+     return new Response(bytes,{headers:{...privateHeaders,'Content-Type':'image/webp'}});
+    }
     if(path==='/Testing/downloads' || path==='/Testing/downloads.json'){
      if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
      const report=await downloadReport(env);
@@ -59,10 +75,10 @@ export function createHandler(assets, fetcher = fetch) {
     }
     if(path.startsWith('/Testing/books/')) {
      const name=path.slice('/Testing/books/'.length);
-     const isExisting=name==='life-secrets.pdf';
+     const isExisting=name==='life-secrets.pdf'&&!Object.hasOwn(assets.completedBooks||{},name);
      const file=isExisting?assets.book:Object.hasOwn(assets.completedBooks||{},name)?assets.completedBooks[name]:null;
      if(!file)return new Response('Book not found.',{status:404,headers:privateHeaders});
-     const bookKey=isExisting?env.BOOK_ENCRYPTION_KEY:env.PREVIEW_CONTENT_KEY;
+     const bookKey=isExisting?env.BOOK_ENCRYPTION_KEY:['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY'].includes(file.keyEnv)?env[file.keyEnv]:env.PREVIEW_CONTENT_KEY;
      if(!bookKey)return privatePage(page('Book unavailable','<h1>This preview book is not available yet.</h1>'),503);
      const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':privateHeaders['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
      if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});
@@ -71,6 +87,9 @@ export function createHandler(assets, fetcher = fetch) {
      if(url.searchParams.get('download')==='1' && !purpose.toLowerCase().includes('prefetch'))await captureDownload(env,name);
      return new Response(bytes,{headers:pdfHeaders});
     }
+    const route=path.match(/^\/Testing\/(book|checkout)\/([a-z0-9-]+)$/);
+    const isInfo=/^\/Testing\/info\/(about|privacy|terms|refunds|contact)$/.test(path);
+    if(!['/Testing','/Testing/'].includes(path)&&!isInfo&&!(route&&previewBookSlugs.includes(route[2])&&(route[1]!=='checkout'||['life-secrets','art-of-attention','man-and-people'].includes(route[2]))))return privatePage(page('Not found','<h1>Page not found.</h1><p><a href="/Testing">Return to the bookshelf</a></p>'),404);
     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
     const bytes=await decryptBook(assets.testing,previewKey);
     return new Response(bytes,{headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});

@@ -1,1 +1,1 @@
-{"version":"7","dialect":"sqlite","entries":[{"idx":0,"version":"6","when":1792627200000,"tag":"0000_download_counts","breakpoints":true}]}
+{"version": "7", "dialect": "sqlite", "entries": [{"idx": 0, "version": "6", "when": 1792627200000, "tag": "0000_download_counts", "breakpoints": true}, {"idx": 1, "version": "6", "when": 1792656000000, "tag": "0001_testing_events", "breakpoints": true}]}
