@@ -51,7 +51,8 @@
   }
   document.getElementById('measurement-accept')?.addEventListener('click', () => choose('accepted'));
   document.getElementById('measurement-reject')?.addEventListener('click', () => choose('rejected'));
-  const stored = preference();
+  let bookMeasurementOff=false;try{bookMeasurementOff=localStorage.getItem('oportals-testing-measurement')==='deny'}catch{}
+  const stored = bookMeasurementOff ? 'rejected' : preference();
   if (stored === 'accepted') enable(true);
   else if (stored === 'rejected') { window['ga-disable-' + ID] = true; clearCookies(); }
   else enable(true);
