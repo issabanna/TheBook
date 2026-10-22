@@ -104,7 +104,7 @@ export function createHandler(assets, fetcher = fetch) {
     }
     const route=path.match(/^\/Testing\/(book|checkout)\/([a-z0-9-]+)$/);
     const isInfo=/^\/Testing\/info\/(about|privacy|terms|refunds|contact)$/.test(path);
-    if(!['/Testing','/Testing/'].includes(path)&&!isInfo&&!(route&&previewBookSlugs.includes(route[2])&&(route[1]!=='checkout'||['life-secrets','art-of-attention','man-and-people'].includes(route[2]))))return privatePage(page('Not found','<h1>Page not found.</h1><p><a href="/Testing">Return to the bookshelf</a></p>'),404);
+    if(!['/Testing','/Testing/'].includes(path)&&!isInfo&&!(route&&previewBookSlugs.includes(route[2])&&(route[1]!=='checkout'||['life-secrets','art-of-attention','man-and-people','lead-without-the-noise'].includes(route[2]))))return privatePage(page('Not found','<h1>Page not found.</h1><p><a href="/Testing">Return to the bookshelf</a></p>'),404);
     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
     const bytes=await decryptBook(assets.testing,previewKey);
     let content=new TextDecoder().decode(bytes).replace('<script>','<script>window.OPORTALS_OWNER='+JSON.stringify(isOwner)+';window.OPORTALS_FREE_DOWNLOADS='+JSON.stringify(assets.testing?.temporaryDownloads===true)+';');if(isOwner)content=content.replaceAll('data-owner-only hidden','data-owner-only');return new Response(content,{headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
