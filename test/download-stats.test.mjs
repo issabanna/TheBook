@@ -7,7 +7,7 @@ const origin='https://oportals.com',auth={'oai-authenticated-user-id':'owner','o
 async function fixture(){
  const key=randomBytes(32).toString('base64'),k=await crypto.subtle.importKey('raw',Buffer.from(key,'base64'),'AES-GCM',false,['encrypt']);
  async function seal(text){const iv=crypto.getRandomValues(new Uint8Array(12));return {keyEnv:'PREVIEW_CONTENT_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(text))).toString('base64')}}
- const pdf=await seal('%PDF-1.4\nprivate sample\n%%EOF');const assets={testing:await seal('<h1>Testing</h1>'),completedBooks:{'art-of-attention.pdf':pdf,'art-of-attention-sample.pdf':pdf}};
+ const pdf=await seal('%PDF-1.4\nprivate sample\n%%EOF');const assets={testing:await seal('<h1>Testing</h1>'),completedBooks:{'sneakpeak-ideas.pdf':pdf,'art-of-attention.pdf':pdf,'art-of-attention-sample.pdf':pdf}};
  const env={PREVIEW_OWNER_EMAIL:'owner@example.com',PREVIEW_CONTENT_KEY:key,DB:createDownloadDB()};return {env,handler:createHandler(assets)};
 }
 test('per-book sample and full counters record only authenticated successful download requests',async()=>{
@@ -32,3 +32,5 @@ test('decryption or recording errors cannot create a successful unrecorded attac
  assert.equal((await h(new Request(url.split('?')[0],{headers:auth}),noDB)).status,200);
  assert.equal((await h(new Request(origin+'/Testing/downloads.json',{headers:auth}),noDB)).status,503);
 });
+
+test('free anthology has its own per-book download count',async()=>{const {env,handler}=await fixture();const r=await handler(new Request(origin+'/Testing/books/sneakpeak-ideas.pdf?download=1',{headers:auth}),env);assert.equal(r.status,200);const report=await handler(new Request(origin+'/Testing/downloads.json',{headers:auth}),env);const book=(await report.json()).books.find(b=>b.id==='sneakpeak-ideas');assert.equal(book.full,1);assert.equal(book.sample,0);});
