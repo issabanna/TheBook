@@ -1,3 +1,11 @@
+# Current Testing access and layout update
+
+The user subsequently requested that the entire Testing storefront be accessible without an OpenAI account. `/Testing`, book popups, policy/contact pages, checkout previews, free samples, preview images and SneakPeak Ideas are now public. Owner reports and complete paid-book review files remain authenticated. Testing stays noindex; the root public homepage is unchanged.
+
+Cards are compact with smaller covers and two-line descriptions. Book details open in a modal with a sticky Close button, Escape and backdrop dismissal, retaining the shelf beneath. Version 2/original PDF covers and sample files have been restored, and displayed covers are exports of those exact PDFs. The Arabic/bundle FAQ item was removed. Version 2 remains backed up.
+
+The commercial implementation notes below describe the preceding pass; references to owner-only storefront access are superseded by the access rules above.
+
 # OPortals Testing commercial preview
 
 Scope: `/Testing` only. The existing public homepage, analytics script, PayPal URL, paid PDF and $15 verification rules are unchanged.

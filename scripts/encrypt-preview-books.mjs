@@ -9,6 +9,6 @@ for await(const line of rl){
  const books={};for(const name of ['life-secrets.pdf','life-secrets-sample.pdf','sneakpeak-ideas.pdf','art-of-attention.pdf','man-and-people-guide.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf'])books[name]=await encrypt('private/books/'+name);
  const media={};for(const name of await readdir(new URL('../private/books/web-media/',import.meta.url)))media[name]=await encrypt('private/books/web-media/'+name);await writeFile(new URL('../src/encrypted-preview-media.json',import.meta.url),JSON.stringify(media));
  await writeFile(new URL('../src/encrypted-preview-books.json',import.meta.url),JSON.stringify(books));
- await writeFile(new URL('../src/encrypted-preview.json',import.meta.url),JSON.stringify(await encrypt('private/Testing.html')));
+ await writeFile(new URL('../src/encrypted-preview.json',import.meta.url),JSON.stringify({...await encrypt('private/Testing.html'),publicPreview:true}));
  console.log('Private page, completed books, and samples encrypted.');rl.close();break;
 }
