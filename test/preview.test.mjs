@@ -17,14 +17,14 @@ test('anonymous and other signed-in visitors cannot read private preview',async(
 });
 test('configured site owner can decrypt the preview; GET and HEAD have private cache controls',async()=>{
  const headers={'oai-authenticated-user-id':'owner','oai-authenticated-user-email':'Owner@example.com'};
- const r=await handler(new Request(origin+'/Testing',{headers}),env);assert.equal(r.status,200);assert.equal(await r.text(),'<h1>Private catalogue test</h1>');assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+ const r=await handler(new Request(origin+'/Testing',{headers}),env);assert.equal(r.status,200);assert.equal(await r.text(),'<h1>Private catalogue test</h1>');assert.match(r.headers.get('Content-Security-Policy'),/object-src 'self'/);assert.match(r.headers.get('Content-Security-Policy'),/frame-src 'self'/);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
  const head=await handler(new Request(origin+'/Testing/',{method:'HEAD',headers}),env);assert.equal(head.status,200);assert.equal(await head.text(),'');
 });
 test('missing settings and incorrect keys fail closed; public homepage remains public',async()=>{
  assert.equal((await handler(new Request(origin+'/Testing'),{})).status,503);
  const headers={'oai-authenticated-user-id':'owner','oai-authenticated-user-email':'owner@example.com'};
  assert.equal((await handler(new Request(origin+'/Testing',{headers}),{...env,PREVIEW_ENCRYPTION_KEY:randomBytes(32).toString('base64')})).status,503);
- assert.equal(await (await handler(new Request(origin+'/'),env)).text(),'Public homepage');
+ const home=await handler(new Request(origin+'/'),env);assert.equal(await home.text(),'Public homepage');assert.match(home.headers.get('Content-Security-Policy'),/object-src 'none'/);
  assert.equal((await handler(new Request(origin+'/Testing',{method:'POST'}),env)).status,405);
 });
 
@@ -39,7 +39,7 @@ test('private review PDFs require the owner and use an independent content key',
  assert.equal((await h(new Request(url),config)).status,401);
  assert.equal((await h(new Request(url,{headers:{...auth,'oai-authenticated-user-email':'someone@example.com'}}),config)).status,403);
  const pdf=await h(new Request(url,{headers:auth}),config);
- assert.equal(pdf.status,200);assert.equal(pdf.headers.get('Content-Type'),'application/pdf');assert.equal(pdf.headers.get('Cache-Control'),'private, no-store');assert.match(pdf.headers.get('Content-Disposition'),/^inline;/);assert.match(pdf.headers.get('Content-Security-Policy'),/frame-ancestors 'self'/);assert.equal(pdf.headers.get('X-Frame-Options'),'SAMEORIGIN');assert.match(await pdf.text(),/^%PDF-1.4/);
+ assert.equal(pdf.status,200);assert.equal(pdf.headers.get('Content-Type'),'application/pdf');assert.equal(pdf.headers.get('Cache-Control'),'private, no-store');assert.match(pdf.headers.get('Content-Disposition'),/^inline;/);assert.match(pdf.headers.get('Content-Security-Policy'),/frame-ancestors 'self'/);assert.equal(pdf.headers.get('X-Frame-Options'),'SAMEORIGIN');assert.match(pdf.headers.get('Content-Security-Policy'),/object-src 'self'/);assert.match(pdf.headers.get('Content-Security-Policy'),/frame-src 'self'/);assert.match(await pdf.text(),/^%PDF-1.4/);
  const attachment=await h(new Request(url+'?download=1',{headers:auth}),config);assert.match(attachment.headers.get('Content-Disposition'),/^attachment; filename="art-of-attention.pdf"/);
  const head=await h(new Request(url,{method:'HEAD',headers:auth}),config);assert.equal(head.status,200);assert.equal(await head.text(),'');assert.equal(head.headers.get('Content-Type'),'application/pdf');
  assert.equal((await h(new Request(origin+'/Testing/books/not-a-book.pdf',{headers:auth}),config)).status,404);

@@ -43,7 +43,7 @@ export function createHandler(assets, fetcher = fetch) {
   const url=new URL(request.url),path=url.pathname;
   try {
    if(path==='/Testing' || path==='/Testing/' || path.startsWith('/Testing/books/') || path==='/Testing/downloads' || path==='/Testing/downloads.json') {
-    const privateHeaders={...headers,'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
+    const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     if(request.method!=='GET' && request.method!=='HEAD')return new Response('Method not allowed.',{status:405,headers:privateHeaders});
     const previewKey=assets.testing?.keyEnv==='PREVIEW_CONTENT_KEY'?env.PREVIEW_CONTENT_KEY:env.PREVIEW_ENCRYPTION_KEY;
@@ -64,7 +64,7 @@ export function createHandler(assets, fetcher = fetch) {
      if(!file)return new Response('Book not found.',{status:404,headers:privateHeaders});
      const bookKey=isExisting?env.BOOK_ENCRYPTION_KEY:env.PREVIEW_CONTENT_KEY;
      if(!bookKey)return privatePage(page('Book unavailable','<h1>This preview book is not available yet.</h1>'),503);
-     const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':headers['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
+     const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':privateHeaders['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
      if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});
      const bytes=await decryptBook(file,bookKey);
      const purpose=(request.headers.get('purpose')||'')+' '+(request.headers.get('sec-purpose')||'');
