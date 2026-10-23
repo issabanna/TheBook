@@ -148,7 +148,8 @@ export function createHandler(assets, fetcher = fetch) {
    if(path==='/checkout') {
     if(request.method!=='GET')return json({error:'Method not allowed.'},405);
     if(!ready(env))return htmlResponse(page('Checkout being connected','<h1>A little more to come.</h1><p>Checkout is being connected. Please come back soon. No payment has been taken here.</p>'),503);
-    return new Response(null,{status:303,headers:{...headers,Location:BOOK_PRODUCTS[url.searchParams.get('book')||'life-secrets']?.link||PAYPAL_LINK}});
+    const product=BOOK_PRODUCTS[url.searchParams.get('book')||'life-secrets'];if(!product)return json({error:'This book is not available to purchase.'},404);
+    return new Response(null,{status:303,headers:{...headers,Location:product.link}});
    }
    if(request.method!=='GET' && request.method!=='HEAD')return json({error:'Method not allowed.'},405);
    if(path==='/paypal/return')return htmlResponse(receiptPage);
