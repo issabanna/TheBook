@@ -40,3 +40,5 @@ runpy.run_path(str(R/'scripts/add-free-book-form.py'))
 
 import subprocess
 subprocess.run(['node',str(R/'scripts/organize-testing-home.cjs')],check=True)
+
+subprocess.run(["node",str(R/"scripts/refine-book-offers.cjs"),str(R/"public/testing-next.html"),"--price-preview"],check=True,cwd=R)
