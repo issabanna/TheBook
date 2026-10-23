@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 R=Path(__file__).resolve().parents[1]
-data=json.loads((R/'public/weekly-ideas/editorial-month.json').read_text())
+data=json.loads((R/'content/weekly-editorial.json').read_text())
 s=(R/'private/Testing.html').read_text()
 css='''
 /* Reading-first editorial experiment: Testing only. */
@@ -32,8 +32,11 @@ for i,w in enumerate(data['weeks'],1):
  report += [f'## Week {i}: {w["label"]}',w['title'],w['intro'],'']
  for a in w['ideas']:
   report += ['### '+a['title'],a['lead'],'']+a['body']+['','**A question to keep:** '+a['question'],'**Try it today:** '+a['experiment'],'**Related book:** '+a['bookTitle'],'']
-(R/'public/weekly-ideas/month-1-review.md').write_text('\n\n'.join(report))
+(R/'content/month-1-review.md').write_text('\n\n'.join(report))
 print('Built Testing-only reading experience: four weeks, twelve original ideas, twelve experiments, book and sample links.')
 
 import runpy
 runpy.run_path(str(R/'scripts/add-free-book-form.py'))
+
+import subprocess
+subprocess.run(['node',str(R/'scripts/organize-testing-home.cjs')],check=True)
