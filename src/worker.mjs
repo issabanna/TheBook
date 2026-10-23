@@ -77,7 +77,7 @@ export function createHandler(assets, fetcher = fetch) {
      const result=await previewMetrics(env);return new Response(request.method==='HEAD'?null:result.body,{status:result.status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }
     if(path.startsWith('/Testing/media/')){
-     const name=path.slice('/Testing/media/'.length),file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
+     const name=path.slice('/Testing/media/'.length);if(!live&&Object.hasOwn(assets.draftMedia||{},name))return new Response(request.method==='HEAD'?null:fromBase64(assets.draftMedia[name]),{headers:{...privateHeaders,'Content-Type':'image/webp'}});const file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
      if(!file)return new Response('Image not found',{status:404,headers:privateHeaders});
      const key=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(file.keyEnv)?env[file.keyEnv]:null;
      if(!key)return new Response('Image unavailable',{status:503,headers:privateHeaders});
@@ -107,7 +107,7 @@ export function createHandler(assets, fetcher = fetch) {
     const isInfo=/^\/Testing\/info\/(about|privacy|terms|refunds|contact)$/.test(path);
     if(!['/Testing','/Testing/'].includes(path)&&!isInfo&&!(route&&previewBookSlugs.includes(route[2])&&(route[1]!=='checkout'||['life-secrets','art-of-attention','man-and-people','lead-without-the-noise'].includes(route[2]))))return privatePage(page('Not found','<h1>Page not found.</h1><p><a href="/Testing">Return to the bookshelf</a></p>'),404);
     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
-    const bytes=await decryptBook(assets.testing,previewKey);
+    const bytes=!live&&assets.testingDraft?new TextEncoder().encode(assets.testingDraft):await decryptBook(assets.testing,previewKey);
     let content=new TextDecoder().decode(bytes).replace('<script>','<script>window.OPORTALS_OWNER='+JSON.stringify(isOwner)+';window.OPORTALS_LIVE='+JSON.stringify(live)+';window.OPORTALS_FREE_DOWNLOADS='+JSON.stringify(assets.testing?.temporaryDownloads===true)+';');if(isOwner)content=content.replaceAll('data-owner-only hidden','data-owner-only');if(live){content=content.replaceAll('href="/Testing/checkout/life-secrets"','href="/checkout"').replaceAll('\\/Testing','').replaceAll('/Testing','').replace('<meta name="robots" content="noindex,nofollow">','<meta name="robots" content="index,follow">');content=content.replace('</head>','<script src="/analytics.js" defer></script><link rel="canonical" href="'+url.origin+url.pathname+'"></head>');}const documentHeaders={...privateHeaders,'Content-Type':'text/html; charset=utf-8'};if(live)delete documentHeaders['X-Robots-Tag'];return new Response(content,{headers:documentHeaders});
    }
    if(path==='/analytics.js' && request.method==='GET')return new Response(assets.analytics,{headers:{...headers,'Content-Type':'text/javascript; charset=utf-8'}});
