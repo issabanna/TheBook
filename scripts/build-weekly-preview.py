@@ -31,3 +31,6 @@ for i,w in enumerate(data['weeks'],1):
   report += ['### '+a['title'],a['lead'],'']+a['body']+['','**A question to keep:** '+a['question'],'**Try it today:** '+a['experiment'],'**Related book:** '+a['bookTitle'],'']
 (R/'public/weekly-ideas/month-1-review.md').write_text('\n\n'.join(report))
 print('Built Testing-only reading experience: four weeks, twelve original ideas, twelve experiments, book and sample links.')
+
+import runpy
+runpy.run_path(str(R/'scripts/add-free-book-form.py'))

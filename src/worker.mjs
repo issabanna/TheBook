@@ -1,3 +1,4 @@
+import {registerFreeBook,freeBookGrant,noteFreeBookDownload,freeBookLeadReport} from './free-book-leads.mjs';
 import {submitContact,contactInbox,processContactQueue,deleteContact} from './contact.mjs';
 import {previewBookSlugs,recordPreviewEvent,previewMetrics} from './testing-events.mjs';
 import { SITE_URL, PAYPAL_LINK, PaymentError, ready, emailReady, verifyPDT, verifyIPN, assertPayment, issueToken, readToken, decryptBook, fromBase64, emailReceipt } from './payment.mjs';
@@ -48,19 +49,22 @@ export function createHandler(assets, fetcher = fetch) {
    if(path==='/Testing' || path.startsWith('/Testing/')) {
     const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'; font-src 'self' data:",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
-    if(request.method!=='GET' && request.method!=='HEAD' && !(['/Testing/api/events','/Testing/api/contact','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)&&request.method==='POST'))return new Response('Method not allowed.',{status:405,headers:privateHeaders});
+    if(request.method!=='GET' && request.method!=='HEAD' && !(['/Testing/api/events','/Testing/api/contact','/Testing/api/contact/deliver','/Testing/api/contact/delete','/Testing/api/free-book','/Testing/leads'].includes(path)&&request.method==='POST'))return new Response('Method not allowed.',{status:405,headers:privateHeaders});
     const previewKey=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(assets.testing?.keyEnv)?env[assets.testing.keyEnv]:env.PREVIEW_ENCRYPTION_KEY;
     if(!previewKey)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
     const isOwner=!!viewerId&&!!viewer&&!!env.PREVIEW_OWNER_EMAIL&&viewer.trim().toLowerCase()===env.PREVIEW_OWNER_EMAIL.trim().toLowerCase();
+    const gatedFreeBook=!live&&!!assets.testingDraft&&path==='/Testing/books/sneakpeak-ideas.pdf';const freeGrant=gatedFreeBook?await freeBookGrant(request,env):null;if(gatedFreeBook&&!freeGrant&&!isOwner)return new Response(null,{status:303,headers:{...privateHeaders,Location:'/Testing/book/sneakpeak-ideas?get=1'}});
     const publicFiles=new Set(["the-philosopher-manager-sample.pdf","lead-without-the-noise-sample.pdf","time-for-what-matters-sample.pdf","stand-out-for-something-sample.pdf",'sneakpeak-ideas.pdf','life-secrets-sample.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf']);
     if(assets.testing?.temporaryDownloads===true)for(const name of ['life-secrets.pdf','art-of-attention.pdf','man-and-people-guide.pdf','the-philosopher-manager.pdf','lead-without-the-noise.pdf','time-for-what-matters.pdf','stand-out-for-something.pdf'])publicFiles.add(name);
-    const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/metrics','/Testing/downloads','/Testing/downloads.json','/Testing/contact-inbox','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
+    const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/leads','/Testing/leads.csv','/Testing/metrics','/Testing/downloads','/Testing/downloads.json','/Testing/contact-inbox','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
     if(ownerOnly&&!isOwner){
      if(!viewer||!viewerId)return privatePage(page('Owner access','<h1>Owner access required.</h1><p>The storefront and free samples are open to everyone. Reports and full paid-book review files require the owner account.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a href="/Testing">Back to the bookstore</a></p>'),401);
      return privatePage(page('Owner access','<h1>Owner access required.</h1><p><a href="/Testing">Back to the bookstore</a></p>'),403);
     }
+    if(!live&&assets.testingDraft&&path==='/Testing/api/free-book')return registerFreeBook(request,env);
+    if(!live&&assets.testingDraft&&['/Testing/leads','/Testing/leads.csv'].includes(path)){const response=await freeBookLeadReport(request,env);return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers:{...privateHeaders,...Object.fromEntries(response.headers)}});}
     if(path==='/Testing/api/contact'||path==='/Testing/api/contact/deliver'||path==='/Testing/api/contact/delete'){
      if(request.method!=='POST')return new Response('Method not allowed',{status:405,headers:privateHeaders});
      const result=path.endsWith('/deliver')?await processContactQueue(request,env,fetcher):path.endsWith('/delete')?await deleteContact(request,env):await submitContact(request,env,fetcher);
@@ -100,7 +104,7 @@ export function createHandler(assets, fetcher = fetch) {
      if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});
      const bytes=await decryptBook(file,bookKey);
      const purpose=(request.headers.get('purpose')||'')+' '+(request.headers.get('sec-purpose')||'');
-     if(url.searchParams.get('download')==='1' && !purpose.toLowerCase().includes('prefetch'))await captureDownload(env,name);
+     if(url.searchParams.get('download')==='1' && !purpose.toLowerCase().includes('prefetch')){await captureDownload(env,name);if(gatedFreeBook)await noteFreeBookDownload(env,freeGrant);}
      return new Response(bytes,{headers:pdfHeaders});
     }
     const route=path.match(/^\/Testing\/(book|checkout)\/([a-z0-9-]+)$/);
