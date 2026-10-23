@@ -43,7 +43,7 @@ function reportPage(rows){
 }
 export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
-  const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
+  const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
    if(live&&path==='/Testing/checkout/life-secrets')return new Response(null,{status:303,headers:{...headers,Location:'/checkout'}});
    if(path==='/Testing' || path.startsWith('/Testing/')) {
@@ -55,7 +55,7 @@ export function createHandler(assets, fetcher = fetch) {
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
     const isOwner=!!viewerId&&!!viewer&&!!env.PREVIEW_OWNER_EMAIL&&viewer.trim().toLowerCase()===env.PREVIEW_OWNER_EMAIL.trim().toLowerCase();
-    const gatedFreeBook=!live&&!!assets.testingDraft&&path==='/Testing/books/sneakpeak-ideas.pdf';const freeGrant=gatedFreeBook?await freeBookGrant(request,env):null;if(gatedFreeBook&&!freeGrant&&!isOwner)return new Response(null,{status:303,headers:{...privateHeaders,Location:'/Testing/book/sneakpeak-ideas?get=1'}});
+    const gatedFreeBook=(!live||assets.publishedDraft)&&!!assets.testingDraft&&path==='/Testing/books/sneakpeak-ideas.pdf';const freeGrant=gatedFreeBook?await freeBookGrant(request,env):null;if(gatedFreeBook&&!freeGrant&&!isOwner)return new Response(null,{status:303,headers:{...privateHeaders,Location:(live?'':'/Testing')+'/book/sneakpeak-ideas?get=1'}});
     const publicFiles=new Set(["the-philosopher-manager-sample.pdf","lead-without-the-noise-sample.pdf","time-for-what-matters-sample.pdf","stand-out-for-something-sample.pdf",'sneakpeak-ideas.pdf','life-secrets-sample.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf']);
     if(assets.testing?.temporaryDownloads===true)for(const name of ['life-secrets.pdf','art-of-attention.pdf','man-and-people-guide.pdf','the-philosopher-manager.pdf','lead-without-the-noise.pdf','time-for-what-matters.pdf','stand-out-for-something.pdf'])publicFiles.add(name);
     const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/leads','/Testing/leads.csv','/Testing/metrics','/Testing/downloads','/Testing/downloads.json','/Testing/contact-inbox','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
@@ -63,8 +63,8 @@ export function createHandler(assets, fetcher = fetch) {
      if(!viewer||!viewerId)return privatePage(page('Owner access','<h1>Owner access required.</h1><p>The storefront and free samples are open to everyone. Reports and full paid-book review files require the owner account.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a href="/Testing">Back to the bookstore</a></p>'),401);
      return privatePage(page('Owner access','<h1>Owner access required.</h1><p><a href="/Testing">Back to the bookstore</a></p>'),403);
     }
-    if(!live&&assets.testingDraft&&path==='/Testing/api/free-book')return registerFreeBook(request,env);
-    if(!live&&assets.testingDraft&&['/Testing/leads','/Testing/leads.csv'].includes(path)){const response=await freeBookLeadReport(request,env);return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers:{...privateHeaders,...Object.fromEntries(response.headers)}});}
+    if((!live||assets.publishedDraft)&&assets.testingDraft&&path==='/Testing/api/free-book')return registerFreeBook(request,env);
+    if((!live||assets.publishedDraft)&&assets.testingDraft&&['/Testing/leads','/Testing/leads.csv'].includes(path)){const response=await freeBookLeadReport(request,env);return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers:{...privateHeaders,...Object.fromEntries(response.headers)}});}
     if(path==='/Testing/api/contact'||path==='/Testing/api/contact/deliver'||path==='/Testing/api/contact/delete'){
      if(request.method!=='POST')return new Response('Method not allowed',{status:405,headers:privateHeaders});
      const result=path.endsWith('/deliver')?await processContactQueue(request,env,fetcher):path.endsWith('/delete')?await deleteContact(request,env):await submitContact(request,env,fetcher);
@@ -81,7 +81,7 @@ export function createHandler(assets, fetcher = fetch) {
      const result=await previewMetrics(env);return new Response(request.method==='HEAD'?null:result.body,{status:result.status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }
     if(path.startsWith('/Testing/media/')){
-     const name=path.slice('/Testing/media/'.length);if(!live&&Object.hasOwn(assets.draftMedia||{},name))return new Response(request.method==='HEAD'?null:fromBase64(assets.draftMedia[name]),{headers:{...privateHeaders,'Content-Type':'image/webp'}});const file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
+     const name=path.slice('/Testing/media/'.length);if((!live||assets.publishedDraft)&&Object.hasOwn(assets.draftMedia||{},name))return new Response(request.method==='HEAD'?null:fromBase64(assets.draftMedia[name]),{headers:{...privateHeaders,'Content-Type':'image/webp'}});const file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
      if(!file)return new Response('Image not found',{status:404,headers:privateHeaders});
      const key=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(file.keyEnv)?env[file.keyEnv]:null;
      if(!key)return new Response('Image unavailable',{status:503,headers:privateHeaders});
@@ -109,9 +109,9 @@ export function createHandler(assets, fetcher = fetch) {
     }
     const route=path.match(/^\/Testing\/(book|checkout)\/([a-z0-9-]+)$/);
     const isInfo=/^\/Testing\/info\/(about|privacy|terms|refunds|contact)$/.test(path);
-    if(!['/Testing','/Testing/'].includes(path)&&!(path==='/Testing/ideas'&&!live&&assets.testingDraft)&&!isInfo&&!(route&&previewBookSlugs.includes(route[2])&&(route[1]!=='checkout'||['life-secrets','art-of-attention','man-and-people','lead-without-the-noise'].includes(route[2]))))return privatePage(page('Not found','<h1>Page not found.</h1><p><a href="/Testing">Return to the bookshelf</a></p>'),404);
+    if(!['/Testing','/Testing/'].includes(path)&&!(path==='/Testing/ideas'&&(!live||assets.publishedDraft)&&assets.testingDraft)&&!isInfo&&!(route&&previewBookSlugs.includes(route[2])&&(route[1]!=='checkout'||['life-secrets','art-of-attention','man-and-people','lead-without-the-noise'].includes(route[2]))))return privatePage(page('Not found','<h1>Page not found.</h1><p><a href="/Testing">Return to the bookshelf</a></p>'),404);
     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
-    const bytes=!live&&assets.testingDraft?new TextEncoder().encode(assets.testingDraft):await decryptBook(assets.testing,previewKey);
+    const bytes=(!live||assets.publishedDraft)&&assets.testingDraft?new TextEncoder().encode(assets.testingDraft):await decryptBook(assets.testing,previewKey);
     let content=new TextDecoder().decode(bytes).replace('<script>','<script>window.OPORTALS_OWNER='+JSON.stringify(isOwner)+';window.OPORTALS_LIVE='+JSON.stringify(live)+';window.OPORTALS_FREE_DOWNLOADS='+JSON.stringify(assets.testing?.temporaryDownloads===true)+';');if(isOwner)content=content.replaceAll('data-owner-only hidden','data-owner-only');if(live){content=content.replaceAll('href="/Testing/checkout/life-secrets"','href="/checkout"').replaceAll('\\/Testing','').replaceAll('/Testing','').replace('<meta name="robots" content="noindex,nofollow">','<meta name="robots" content="index,follow">');content=content.replace('</head>','<script src="/analytics.js" defer></script><link rel="canonical" href="'+url.origin+url.pathname+'"></head>');}const documentHeaders={...privateHeaders,'Content-Type':'text/html; charset=utf-8'};if(live)delete documentHeaders['X-Robots-Tag'];return new Response(content,{headers:documentHeaders});
    }
    if(path==='/analytics.js' && request.method==='GET')return new Response(assets.analytics,{headers:{...headers,'Content-Type':'text/javascript; charset=utf-8'}});
