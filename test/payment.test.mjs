@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { assertPayment, verifyPDT, verifyIPN, issueToken, readToken, decryptBook, emailReceipt, SITE_URL } from '../src/payment.mjs';
+import { BOOK_PRODUCTS, paymentBook, assertPayment, verifyPDT, verifyIPN, issueToken, readToken, decryptBook, emailReceipt, SITE_URL } from '../src/payment.mjs';
 import { createHandler } from '../src/worker.mjs';
 const tx='8AB12345CD678901E';
 const env={PAYPAL_PDT_TOKEN:'test-token',PAYPAL_RECEIVER_EMAIL:'seller@example.com',PAYPAL_ITEM_NUMBER:'LIFE-SECRETS',BOOK_ENCRYPTION_KEY:randomBytes(32).toString('base64'),DOWNLOAD_SIGNING_KEY:randomBytes(32).toString('base64')};
@@ -81,3 +81,9 @@ test('payment-link title matching verifies the exact configured book when no SKU
 });
 
 test('published paid download delivers the current edition only after PayPal verification',async()=>{const currentKey=randomBytes(32).toString('base64'),k=await crypto.subtle.importKey('raw',Buffer.from(currentKey,'base64'),'AES-GCM',false,['encrypt']),iv=crypto.getRandomValues(new Uint8Array(12));const bytes=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode('%PDF-1.4\ncurrent-edition'));const assets={testing:{liveStorefront:true},completedBooks:{'life-secrets.pdf':{keyEnv:'PREVIEW_V5_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(bytes).toString('base64')}}};const h=createHandler(assets,okFetch);const e={...env,PREVIEW_V5_KEY:currentKey};const result=await h(post({transaction:tx}),e);assert.equal(result.status,200);const link=(await result.json()).download;const r=await h(new Request(SITE_URL+link),e);assert.equal(r.status,200);assert.equal(await r.text(),'%PDF-1.4\ncurrent-edition');const rejected=createHandler(assets,async()=>new Response('FAIL'));assert.equal((await rejected(new Request(SITE_URL+link),e)).status,403);});
+
+test('four hosted products verify exact titles and prices, bind tokens and deliver matching encrypted files',async()=>{
+ const k=await crypto.subtle.importKey('raw',Buffer.from(env.BOOK_ENCRYPTION_KEY,'base64'),'AES-GCM',false,['encrypt']);const files={};for(const [id,b]of Object.entries(BOOK_PRODUCTS)){const iv=crypto.getRandomValues(new Uint8Array(12));files[b.file]={keyEnv:'BOOK_ENCRYPTION_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode('PDF:'+id))).toString('base64')};}
+ for(const [id,b]of Object.entries(BOOK_PRODUCTS)){const p=payment({item_name:b.title,item_number:'LIFE-SECRETS',mc_gross:b.price});assert.equal(paymentBook(assertPayment(p,env),env),id);assert.throws(()=>assertPayment(payment({item_name:b.title,mc_gross:'1.00'}),env));const h=createHandler({testing:{liveStorefront:true},completedBooks:files},async()=>new Response(pdt(p)));const start=await h(new Request(SITE_URL+'/checkout?book='+id),env);assert.equal(start.headers.get('Location'),b.link);const res=await h(post({transaction:tx}),env);assert.equal(res.status,200);const data=await res.json();const good=await h(new Request(SITE_URL+data.download),env);assert.equal(good.status,200);assert.equal(await good.text(),'PDF:'+id);const wrong=await issueToken(tx,env,undefined,id==='life-secrets'?'art-of-attention':'life-secrets');assert.equal((await h(new Request(SITE_URL+'/download?t='+wrong),env)).status,403);}
+ assert.throws(()=>assertPayment(payment({item_name:'Unrelated product',mc_gross:'7.99'}),env));
+});

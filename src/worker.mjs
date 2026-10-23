@@ -1,7 +1,7 @@
 import {registerFreeBook,freeBookGrant,noteFreeBookDownload,freeBookLeadReport} from './free-book-leads.mjs';
 import {submitContact,contactInbox,processContactQueue,deleteContact} from './contact.mjs';
 import {previewBookSlugs,recordPreviewEvent,previewMetrics} from './testing-events.mjs';
-import { SITE_URL, PAYPAL_LINK, PaymentError, ready, emailReady, verifyPDT, verifyIPN, assertPayment, issueToken, readToken, decryptBook, fromBase64, emailReceipt } from './payment.mjs';
+import { SITE_URL, PAYPAL_LINK, BOOK_PRODUCTS, paymentBook, PaymentError, ready, emailReady, verifyPDT, verifyIPN, assertPayment, issueToken, readToken, decryptBook, fromBase64, emailReceipt } from './payment.mjs';
 // Build injects the public assets and encrypted paid book. No plaintext paid PDF is published.
 const headers = {
   'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff',
@@ -15,7 +15,7 @@ function page(title, content) { return `<!doctype html><html lang="en"><head><me
 const receiptPage = page('Your book', `<h1>Your next perspective.</h1><p id="message" role="status" aria-live="polite">Verifying your PayPal payment…</p><a id="download" hidden>Download your book ↓</a><form id="receipt" hidden><label for="transaction">PayPal transaction ID from your receipt</label><input id="transaction" name="transaction" maxlength="32" autocomplete="off" required pattern="[A-Za-z0-9]{8,32}"><button>Verify my purchase</button></form><p><small>Download links last 24 hours. Save the PDF to your device. Keep your PayPal receipt so you can verify your purchase again later.</small></p><script>
 const message=document.querySelector('#message'),form=document.querySelector('#receipt'),download=document.querySelector('#download'),input=document.querySelector('#transaction');
 const params=new URLSearchParams(location.search),tx=params.get('tx');history.replaceState(null,'',location.pathname);
-async function verify(transaction){download.hidden=true;form.hidden=true;message.textContent='Verifying your PayPal payment…';try{const r=await fetch('/api/paypal/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Please try again.');download.href=data.download;download.hidden=false;message.textContent='Payment verified. Your Life Secrets PDF is ready.';}catch(e){message.textContent=e.message;form.hidden=false;}}
+async function verify(transaction){download.hidden=true;form.hidden=true;message.textContent='Verifying your PayPal payment…';try{const r=await fetch('/api/paypal/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Please try again.');download.href=data.download;download.hidden=false;message.textContent='Payment verified. Your purchased PDF is ready.';}catch(e){message.textContent=e.message;form.hidden=false;}}
 form.addEventListener('submit',e=>{e.preventDefault();verify(input.value.trim().toUpperCase());});
 if(tx){input.value=tx;verify(tx);}else{message.textContent='Enter the transaction ID on your PayPal receipt to verify your purchase and unlock the book.';form.hidden=false;}
 </script>`);
@@ -45,7 +45,7 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
-   if(live&&path==='/Testing/checkout/life-secrets')return new Response(null,{status:303,headers:{...headers,Location:'/checkout'}});
+   if(live&&/^\/Testing\/checkout\/(?:life-secrets|art-of-attention|lead-without-the-noise|man-and-people)$/.test(path))return new Response(null,{status:303,headers:{...headers,Location:'/checkout?book='+path.split('/').pop()}});
    if(path==='/Testing' || path.startsWith('/Testing/')) {
     const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'; font-src 'self' data:",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
@@ -132,20 +132,23 @@ export function createHandler(assets, fetcher = fetch) {
     if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'Unsupported content type.'},415);
     let data;try{data=JSON.parse(await limitedBody(request,1024));}catch(e){if(e instanceof PaymentError)throw e;throw new PaymentError('Invalid request.');}
     const payment=await verifyPDT(data?.transaction,env,fetcher);
-    const token=await issueToken(payment.get('txn_id'),env);
+    const token=await issueToken(payment.get('txn_id'),env,undefined,paymentBook(payment,env));
     return json({download:`/download?t=${encodeURIComponent(token)}`,expiresIn:86400});
    }
    if(path==='/download') {
     if(request.method!=='GET')return json({error:'Method not allowed.'},405);
     const token=url.searchParams.get('t');const payload=await readToken(token,env);
-    await verifyPDT(payload.tx,env,fetcher);
-    const current=assets.testing?.liveStorefront===true?assets.completedBooks?.['life-secrets.pdf']:null;const pdf=await decryptBook(current||assets.book,current?env[current.keyEnv]:env.BOOK_ENCRYPTION_KEY);
-    return new Response(pdf,{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="Life-Secrets.pdf"','X-Robots-Tag':'noindex, nofollow'}});
+    const verified=await verifyPDT(payload.tx,env,fetcher),book=paymentBook(verified,env);
+    if(book!==(payload.book||'life-secrets'))throw new PaymentError('Payment product does not match this download.',403);
+    const product=BOOK_PRODUCTS[book];const current=assets.testing?.liveStorefront===true?assets.completedBooks?.[product.file]:null;
+    if(!current&&book!=='life-secrets')throw new PaymentError('Book download is temporarily unavailable.',503);
+    const pdf=await decryptBook(current||assets.book,current?env[current.keyEnv]:env.BOOK_ENCRYPTION_KEY);
+    return new Response(pdf,{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="'+product.file+'"','X-Robots-Tag':'noindex, nofollow'}});
    }
    if(path==='/checkout') {
     if(request.method!=='GET')return json({error:'Method not allowed.'},405);
     if(!ready(env))return htmlResponse(page('Checkout being connected','<h1>A little more to come.</h1><p>Checkout is being connected. Please come back soon. No payment has been taken here.</p>'),503);
-    return new Response(null,{status:303,headers:{...headers,Location:PAYPAL_LINK}});
+    return new Response(null,{status:303,headers:{...headers,Location:BOOK_PRODUCTS[url.searchParams.get('book')||'life-secrets']?.link||PAYPAL_LINK}});
    }
    if(request.method!=='GET' && request.method!=='HEAD')return json({error:'Method not allowed.'},405);
    if(path==='/paypal/return')return htmlResponse(receiptPage);

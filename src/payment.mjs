@@ -4,6 +4,23 @@ export class PaymentError extends Error {
 }
 export const SITE_URL = 'https://oportals.com';
 export const PAYPAL_LINK = 'https://www.paypal.com/ncp/payment/CS8XK9B6XLU64';
+export const BOOK_PRODUCTS = {
+ 'life-secrets':{title:'Life Secrets',price:'7.99',sku:'LIFE-SECRETS',file:'life-secrets.pdf',link:PAYPAL_LINK},
+ 'art-of-attention':{title:'The Art of Attention',price:'8.99',sku:'ART-OF-ATTENTION',file:'art-of-attention.pdf',link:'https://www.paypal.com/ncp/payment/QE8P2E2FZBCEL'},
+ 'lead-without-the-noise':{title:'Lead Without the Noise',price:'8.99',sku:'LEAD-WITHOUT-THE-NOISE',file:'lead-without-the-noise.pdf',link:'https://www.paypal.com/ncp/payment/ZX77G6ENKZTGN'},
+ 'man-and-people':{title:'Man and People',price:'9.99',sku:'MAN-AND-PEOPLE',file:'man-and-people-guide.pdf',link:'https://www.paypal.com/ncp/payment/ZR4GFQB5AAV7G'}
+};
+export function paymentBook(p,env){
+ const name=p.get('item_name'),sku=p.get('item_number');
+ const named=Object.entries(BOOK_PRODUCTS).find(([id,b])=>name===b.title);
+ if(named)return named[0];
+ if(env.PAYPAL_ITEM_NAME&&name===env.PAYPAL_ITEM_NAME)return 'life-secrets';
+ if(name)throw new PaymentError('Payment product does not match.',403);
+ const bySku=Object.entries(BOOK_PRODUCTS).find(([id,b])=>sku===b.sku);
+ if(bySku)return bySku[0];
+ if(sku===(env.PAYPAL_ITEM_NUMBER||'LIFE-SECRETS'))return 'life-secrets';
+ throw new PaymentError('Payment product does not match.',403);
+}
 export function ready(env) {
   return Boolean(env.PAYPAL_PDT_TOKEN && env.PAYPAL_RECEIVER_EMAIL && env.BOOK_ENCRYPTION_KEY && env.DOWNLOAD_SIGNING_KEY);
 }
@@ -18,10 +35,9 @@ export function validTransaction(tx) { return typeof tx === 'string' && /^[A-Z0-
 export function assertPayment(p, env, tx) {
   if (!env.PAYPAL_RECEIVER_EMAIL) throw new PaymentError('Checkout is not ready yet.', 503);
   if (p.get('payment_status') !== 'Completed') throw new PaymentError('Payment is not completed.', 403);
-  if (p.get('mc_currency') !== 'USD' || !/^15(?:\.00)?$/.test(p.get('mc_gross') || '')) throw new PaymentError('Payment does not match this book.', 403);
+  const book=paymentBook(p,env),expected=BOOK_PRODUCTS[book].price;
+  if (p.get('mc_currency') !== 'USD' || !(p.get('mc_gross')===expected || book==='life-secrets'&&/^15(?:\.00)?$/.test(p.get('mc_gross')||''))) throw new PaymentError('Payment does not match this book.', 403);
   if ((p.get('receiver_email') || '').toLowerCase() !== env.PAYPAL_RECEIVER_EMAIL.trim().toLowerCase()) throw new PaymentError('Payment recipient does not match.', 403);
-  const productMatches = env.PAYPAL_ITEM_NAME ? p.get('item_name') === env.PAYPAL_ITEM_NAME : p.get('item_number') === (env.PAYPAL_ITEM_NUMBER || 'LIFE-SECRETS');
-  if (!productMatches) throw new PaymentError('Payment product does not match.', 403);
   if (!validTransaction(p.get('txn_id')) || (tx && tx !== p.get('txn_id'))) throw new PaymentError('Transaction does not match.', 403);
   if (env.PAYPAL_ENV !== 'sandbox' && p.get('test_ipn') === '1') throw new PaymentError('Test payments are not accepted here.', 403);
   return p;
@@ -66,9 +82,9 @@ async function signingKey(secret) {
   if (!secret) throw new PaymentError('Downloads are temporarily unavailable.', 503);
   return crypto.subtle.importKey('raw', fromBase64(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
-export async function issueToken(tx, env, expires = Math.floor(Date.now() / 1000) + 86400) {
+export async function issueToken(tx, env, expires = Math.floor(Date.now() / 1000) + 86400, book='life-secrets') {
   if (!validTransaction(tx)) throw new PaymentError('Invalid transaction.');
-  const payload = base64url(encoder.encode(JSON.stringify({ v: 1, tx, exp: expires })));
+  const payload = base64url(encoder.encode(JSON.stringify({ v: 1, tx, exp: expires, book })));
   const signature = await crypto.subtle.sign('HMAC', await signingKey(env.DOWNLOAD_SIGNING_KEY), encoder.encode(payload));
   return `${payload}.${base64url(new Uint8Array(signature))}`;
 }
@@ -80,6 +96,7 @@ export async function readToken(token, env, now = Math.floor(Date.now() / 1000))
     if (!await crypto.subtle.verify('HMAC', await signingKey(env.DOWNLOAD_SIGNING_KEY), fromBase64(sig), encoder.encode(payload))) throw new Error();
     const decoded = JSON.parse(new TextDecoder().decode(fromBase64(payload)));
     if (decoded.v !== 1 || !validTransaction(decoded.tx) || !Number.isSafeInteger(decoded.exp) || decoded.exp <= now) throw new Error();
+    if(decoded.book&&!Object.hasOwn(BOOK_PRODUCTS,decoded.book))throw new Error();
     return decoded;
   } catch { throw new PaymentError('This download link is invalid or expired. Return to your purchase confirmation to get a new link.', 403); }
 }
@@ -97,13 +114,14 @@ export async function emailReceipt(payment, env, fetcher = fetch) {
   const exp = Math.floor(paidAt / 1000) + 7 * 86400;
   if (exp <= Date.now() / 1000) return { enabled: true, expired: true };
   const tx = payment.get('txn_id');
-  const token = await issueToken(tx, env, exp);
+  const book=paymentBook(payment,env),product=BOOK_PRODUCTS[book];
+  const token = await issueToken(tx, env, exp,book);
   const link = `${SITE_URL}/download?t=${encodeURIComponent(token)}`;
   let response;
   try { response = await fetcher('https://api.resend.com/emails', {
     method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `life-secrets-${tx}` },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: 'Your Life Secrets book — O Portals',
-      text: `Thank you for purchasing Life Secrets for $15 USD.\n\nDownload your PDF:\n${link}\n\nThis private link expires seven days after purchase. Keep your PayPal receipt. You can return to ${SITE_URL}/paypal/return and use the transaction ID on your receipt to verify your purchase again.\n\nLife Secrets` }), signal: AbortSignal.timeout(10000)
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: `Your ${product.title} book — OPortals`,
+      text: `Thank you for purchasing ${product.title} for $${payment.get('mc_gross')} USD.\n\nDownload your PDF:\n${link}\n\nThis private link expires seven days after purchase. Keep your PayPal receipt. You can return to ${SITE_URL}/paypal/return and use the transaction ID on your receipt to verify your purchase again.\n\n${product.title}` }), signal: AbortSignal.timeout(10000)
   }); } catch { throw new PaymentError('Receipt email is temporarily unavailable.', 503); }
   if (!response.ok) throw new PaymentError('Receipt email is temporarily unavailable.', 503);
   return { enabled: true, sent: true };
