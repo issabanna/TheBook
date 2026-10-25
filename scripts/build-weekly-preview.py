@@ -44,3 +44,7 @@ subprocess.run(['node',str(R/'scripts/organize-testing-home.cjs')],check=True)
 subprocess.run(["node",str(R/"scripts/refine-book-offers.cjs"),str(R/"public/testing-next.html")],check=True,cwd=R)
 
 subprocess.run(["node",str(R/"scripts/connect-book-payments.cjs")],check=True,cwd=R)
+
+p=R/"public/testing-next.html"
+s=p.read_text().replace('<nav aria-label="Main navigation">','<nav aria-label="Main navigation"><a href="/Testing/SocialMirror">Social Mirror</a>',1)
+p.write_text(s)
