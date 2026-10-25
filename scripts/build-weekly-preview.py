@@ -48,3 +48,8 @@ subprocess.run(["node",str(R/"scripts/connect-book-payments.cjs")],check=True,cw
 p=R/"public/testing-next.html"
 s=p.read_text().replace('<nav aria-label="Main navigation">','<nav aria-label="Main navigation"><a href="/Testing/SocialMirror">Social Mirror</a>',1)
 p.write_text(s)
+
+# Testing-only invitation bar. The published storefront is kept separate.
+p=R/"public/testing-next.html"
+s=p.read_text().replace("<body>","<body>"+'<aside class="social-mirror-bar" aria-label="Social Mirror"><a href="/Testing/SocialMirror">Social Mirror · How do people see you? <strong>Try it free →</strong></a></aside>',1).replace("</head>",'<style>.social-mirror-bar{background:#f1f3ec;border-bottom:1px solid #dce1d4;text-align:center;padding:9px 16px;font:12px/1.4 Arial,Helvetica,sans-serif;color:#52603c}.social-mirror-bar a{color:inherit;text-decoration:none;display:inline-block}.social-mirror-bar strong{margin-left:9px;text-decoration:underline;text-underline-offset:3px}@media(max-width:450px){.social-mirror-bar{font-size:11px;padding:9px 12px}.social-mirror-bar strong{margin-left:5px}}</style>'+"</head>",1)
+p.write_text(s)
