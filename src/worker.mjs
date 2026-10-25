@@ -1,3 +1,4 @@
+import {socialMirrorApi} from './social-mirror.mjs';
 import {registerFreeBook,freeBookGrant,noteFreeBookDownload,freeBookLeadReport} from './free-book-leads.mjs';
 import {submitContact,contactInbox,processContactQueue,deleteContact} from './contact.mjs';
 import {previewBookSlugs,recordPreviewEvent,previewMetrics} from './testing-events.mjs';
@@ -45,6 +46,7 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
+   if(path.startsWith('/Testing/SocialMirror/api/'))return socialMirrorApi(request,env);
    if(path==='/Testing/SocialMirror'||path==='/Testing/SocialMirror/'){if(!assets.socialMirror)return htmlResponse(page('Not found','Page not found.'),404);return new Response(request.method==='HEAD'?null:assets.socialMirror,{headers:{...headers,'Content-Type':'text/html; charset=utf-8','X-Robots-Tag':'noindex, nofollow'}});}
    if(live&&/^\/Testing\/checkout\/(?:life-secrets|art-of-attention|lead-without-the-noise|man-and-people)$/.test(path))return new Response(null,{status:303,headers:{...headers,Location:'/checkout?book='+path.split('/').pop()}});
    if(path==='/Testing' || path.startsWith('/Testing/')) {
