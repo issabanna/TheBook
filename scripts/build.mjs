@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 const root=path.resolve(import.meta.dirname,'..');
@@ -5,8 +6,9 @@ const read=p=>readFile(path.join(root,p),'utf8');
 await rm(path.join(root,'dist'),{recursive:true,force:true});
 const bookManifest=JSON.parse(await read('src/encrypted-preview-books.json'));
 const previewBooks=Object.fromEntries(await Promise.all(Object.entries(bookManifest).map(async([name,record])=>[name,record.assetFile?JSON.parse(await read('src/'+record.assetFile)):record])));
+execFileSync(process.execPath,['scripts/integrate-social-mirror-shell.cjs'],{cwd:root,stdio:'inherit'});
 const testingDraft=await read('public/testing-next.html');const draftMedia=Object.fromEntries(await Promise.all(['attention','choices','leadership','meaning'].map(async(name)=>['weekly-'+name+'.webp',(await readFile(path.join(root,'public/weekly-ideas/'+name+'.webp'))).toString('base64')])));
-const assets={socialMirror:await read('public/social-mirror.html'),liveDraft:await read('public/published-storefront.html'),publishedDraft:true,testingDraft,draftMedia,previewMedia:JSON.parse(await read('src/encrypted-preview-media.json')),completedBooks:previewBooks,testing:JSON.parse(await read('src/encrypted-preview.json')),analytics:await read('public/analytics.js'),logo:await read('public/oportals-mark.svg'),home:await read('public/index.html'),sample:(await readFile(path.join(root,'public/Life-Secrets-Sample.pdf'))).toString('base64'),book:JSON.parse(await read('src/encrypted-book.json'))};
+const assets={socialMirror:await read('public/social-mirror-shell.html'),liveDraft:await read('public/published-storefront.html'),publishedDraft:true,testingDraft,draftMedia,previewMedia:JSON.parse(await read('src/encrypted-preview-media.json')),completedBooks:previewBooks,testing:JSON.parse(await read('src/encrypted-preview.json')),analytics:await read('public/analytics.js'),logo:await read('public/oportals-mark.svg'),home:await read('public/index.html'),sample:(await readFile(path.join(root,'public/Life-Secrets-Sample.pdf'))).toString('base64'),book:JSON.parse(await read('src/encrypted-book.json'))};
 const payment=await read('src/payment.mjs');
 const worker=(await read('src/worker.mjs')).replace(/^import .*from '\.\/(?:payment|testing-events|contact|free-book-leads|social-mirror).mjs';\n/gm,'');
 await mkdir(path.join(root,'dist/server'),{recursive:true});await mkdir(path.join(root,'dist/.openai'),{recursive:true});
