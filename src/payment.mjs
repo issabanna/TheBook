@@ -5,6 +5,7 @@ export class PaymentError extends Error {
 export const SITE_URL = 'https://oportals.com';
 export const PAYPAL_LINK = 'https://www.paypal.com/ncp/payment/CS8XK9B6XLU64';
 export const BOOK_PRODUCTS = {
+ 'social-mirror-analysis':{title:'Social Mirror — Detailed Analysis',price:'4.00',sku:'SOCIAL-MIRROR-ANALYSIS',service:true,link:'https://www.paypal.com/ncp/payment/ET3BZ9GVKS3PS'},
  'life-secrets':{title:'Life Secrets',price:'7.99',sku:'LIFE-SECRETS',file:'life-secrets.pdf',link:PAYPAL_LINK},
  'art-of-attention':{title:'The Art of Attention',price:'8.99',sku:'ART-OF-ATTENTION',file:'art-of-attention.pdf',link:'https://www.paypal.com/ncp/payment/QE8P2E2FZBCEL'},
  'lead-without-the-noise':{title:'Lead Without the Noise',price:'8.99',sku:'LEAD-WITHOUT-THE-NOISE',file:'lead-without-the-noise.pdf',link:'https://www.paypal.com/ncp/payment/ZX77G6ENKZTGN'},
@@ -12,6 +13,7 @@ export const BOOK_PRODUCTS = {
 };
 export function paymentBook(p,env){
  const name=p.get('item_name'),sku=p.get('item_number');
+ if(['Social Mirror - Detailed Analysis','Social Mirror Detailed Analysis'].includes(name))return 'social-mirror-analysis';
  const named=Object.entries(BOOK_PRODUCTS).find(([id,b])=>name===b.title);
  if(named)return named[0];
  if(env.PAYPAL_ITEM_NAME&&name===env.PAYPAL_ITEM_NAME)return 'life-secrets';
@@ -106,6 +108,7 @@ export async function decryptBook(asset, secret) {
   return crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(asset.iv) }, key, fromBase64(asset.data));
 }
 export async function emailReceipt(payment, env, fetcher = fetch) {
+  if(paymentBook(payment,env)==='social-mirror-analysis')return {enabled:false};
   if (!emailReady(env)) return { enabled: false };
   const email = payment.get('payer_email');
   if (!email || email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) throw new PaymentError('Receipt email unavailable.', 503);

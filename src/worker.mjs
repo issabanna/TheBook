@@ -16,7 +16,7 @@ function page(title, content) { return `<!doctype html><html lang="en"><head><me
 const receiptPage = page('Your book', `<h1>Your next perspective.</h1><p id="message" role="status" aria-live="polite">Verifying your PayPal payment…</p><a id="download" hidden>Download your book ↓</a><form id="receipt" hidden><label for="transaction">PayPal transaction ID from your receipt</label><input id="transaction" name="transaction" maxlength="32" autocomplete="off" required pattern="[A-Za-z0-9]{8,32}"><button>Verify my purchase</button></form><p><small>Download links last 24 hours. Save the PDF to your device. Keep your PayPal receipt so you can verify your purchase again later.</small></p><script>
 const message=document.querySelector('#message'),form=document.querySelector('#receipt'),download=document.querySelector('#download'),input=document.querySelector('#transaction');
 const params=new URLSearchParams(location.search),tx=params.get('tx');history.replaceState(null,'',location.pathname);
-async function verify(transaction){download.hidden=true;form.hidden=true;message.textContent='Verifying your PayPal payment…';try{const r=await fetch('/api/paypal/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Please try again.');download.href=data.download;download.hidden=false;message.textContent='Payment verified. Your purchased PDF is ready.';}catch(e){message.textContent=e.message;form.hidden=false;}}
+async function verify(transaction){download.hidden=true;form.hidden=true;message.textContent='Verifying your PayPal payment…';try{const r=await fetch('/api/paypal/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Please try again.');if(data.service){sessionStorage.setItem('oportals-mirror-payment',transaction);location.assign('/Testing/SocialMirror?payment=1');return;}download.href=data.download;download.hidden=false;message.textContent='Payment verified. Your purchased PDF is ready.';}catch(e){message.textContent=e.message;form.hidden=false;}}
 form.addEventListener('submit',e=>{e.preventDefault();verify(input.value.trim().toUpperCase());});
 if(tx){input.value=tx;verify(tx);}else{message.textContent='Enter the transaction ID on your PayPal receipt to verify your purchase and unlock the book.';form.hidden=false;}
 </script>`);
@@ -46,7 +46,7 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
-   if(path.startsWith('/Testing/SocialMirror/api/'))return socialMirrorApi(request,env);
+   if(path.startsWith('/Testing/SocialMirror/api/'))return socialMirrorApi(request,env,fetcher);
    if(path==='/Testing/SocialMirror'||path==='/Testing/SocialMirror/'){if(!assets.socialMirror)return htmlResponse(page('Not found','Page not found.'),404);return new Response(request.method==='HEAD'?null:assets.socialMirror,{headers:{...headers,'Content-Security-Policy':headers['Content-Security-Policy']+"; font-src 'self' data:",'Content-Type':'text/html; charset=utf-8','X-Robots-Tag':'noindex, nofollow'}});}
    if(live&&/^\/Testing\/checkout\/(?:life-secrets|art-of-attention|lead-without-the-noise|man-and-people)$/.test(path))return new Response(null,{status:303,headers:{...headers,Location:'/checkout?book='+path.split('/').pop()}});
    if(path==='/Testing' || path.startsWith('/Testing/')) {
@@ -135,6 +135,7 @@ export function createHandler(assets, fetcher = fetch) {
     if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'Unsupported content type.'},415);
     let data;try{data=JSON.parse(await limitedBody(request,1024));}catch(e){if(e instanceof PaymentError)throw e;throw new PaymentError('Invalid request.');}
     const payment=await verifyPDT(data?.transaction,env,fetcher);
+    if(paymentBook(payment,env)==='social-mirror-analysis')return json({service:true});
     const token=await issueToken(payment.get('txn_id'),env,undefined,paymentBook(payment,env));
     return json({download:`/download?t=${encodeURIComponent(token)}`,expiresIn:86400});
    }
