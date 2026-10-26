@@ -7,3 +7,7 @@
 #social-mirror-section .free-card-heading{margin:0 0 22px}#social-mirror-section .free-card-heading h1{font:400 clamp(32px,4vw,48px)/1.12 OPortalsBook,Georgia,serif;letter-spacing:-.7px;margin:0 0 10px}#social-mirror-section .free-card-heading p{font:600 20px/1.35 Arial,sans-serif;color:#52603c;margin:0 0 9px}#social-mirror-section .free-card-heading small{display:block;font:12px/1.5 Arial,sans-serif;color:#6b7078}@media(max-width:700px){#social-mirror-section .free-card-heading h1{font-size:35px}}
 
 #social-mirror-section .card-example-picker{display:flex;gap:7px;overflow-x:auto;max-width:100%;padding:2px 1px 12px;margin-bottom:5px;scrollbar-width:thin}#social-mirror-section .card-example-picker button{flex:0 0 auto;border:1px solid #dce1d4;background:#fff;color:#52603c;border-radius:5px;padding:10px 12px;min-height:42px;font:600 11px/1.4 Arial,sans-serif;cursor:pointer}#social-mirror-section .card-example-picker button[aria-pressed=true]{background:#68734b;color:white;border-color:#68734b}#social-mirror-section .card-example-picker button:focus-visible{outline:2px solid #2459b4;outline-offset:2px}
+
+#natali-example{opacity:1;transition:opacity .26s ease}#natali-example.example-fading{opacity:0}#pause-examples{margin-top:9px}#social-mirror-section .card-example-picker button{transition:background-color .2s ease}@media(prefers-reduced-motion:reduce){#natali-example,#social-mirror-section .card-example-picker button{transition:none}}
+
+#natali-example .reflection-archetype{min-height:2.1em;display:flex;align-items:center;justify-content:center}
