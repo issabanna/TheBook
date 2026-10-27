@@ -1,0 +1,1 @@
+const fs=require('node:fs');const p='public/testing-next.html';let s=fs.readFileSync(p,'utf8').replace(/<style id="readability-adjustments">[\s\S]*?<\/style>/,'');s=s.replace('</head>','<style id="readability-adjustments">'+fs.readFileSync('public/readability.css','utf8')+'</style></head>');fs.writeFileSync(p,s);
