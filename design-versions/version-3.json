@@ -1,0 +1,9 @@
+{
+  "name": "Version 3",
+  "saved_at": "2026-10-27",
+  "commit": "be9b2484f48026a3ac4a8bafd431ea03f5125909",
+  "git_tag": "oportals-version-3-2026-10-27",
+  "saved_site_version": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_dfd89686d1b48191a85ae19f7699c9eb",
+  "restore": "Restore Testing and Social Mirror design from this checkpoint. Preserve customer database records and the live storefront.",
+  "earlier_checkpoint_preserved_as": "oportals-design-version-3"
+}
