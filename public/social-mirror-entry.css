@@ -48,3 +48,10 @@
 #social-mirror-section #sample-analysis .card-example-picker button.get-yours-tab{background:#e8f0df;color:#263820;border-color:#b8c8aa}
 #social-mirror-section #sample-analysis .card-example-picker button.get-yours-tab:hover{background:#dce8d3}
 #social-mirror-section #sample-analysis .card-example-picker button.get-yours-tab[aria-pressed=true]{background:#c6d7b8;color:#263820;border-color:#8fa77a}
+/* Three quiet editorial cards, using the same cream, olive and charcoal as OPortals. */
+#social-mirror-section #landing>.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0;margin:0;border:0;align-items:stretch}
+#social-mirror-section #landing>.steps>div{min-width:0;padding:16px 18px;background:#f6f7f1;border:1px solid #dfe4d7;border-radius:6px}
+#social-mirror-section #landing>.steps .eyebrow{display:block;font-size:10px;line-height:1.4;letter-spacing:1.4px;color:#68734b}
+#social-mirror-section #landing>.steps strong{display:block;font:400 20px/1.2 OPortalsBook,Georgia,serif;color:#30382b;margin:8px 0}
+#social-mirror-section #landing>.steps p{font-size:14px;line-height:1.45;color:#59616a;margin:0}
+@media(max-width:760px){#social-mirror-section #landing>.steps{grid-template-columns:minmax(0,1fr);gap:10px;margin-top:18px}#social-mirror-section #landing>.steps>div{padding:14px 16px}}
