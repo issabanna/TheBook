@@ -1,0 +1,27 @@
+/* Editorial preview: book-specific identities and real pages, not promotional badges. */
+.product .cover-shelf:has(img[src*="editorial-"]){height:215px;border-radius:5px}
+.product .cover-shelf img[src*="editorial-"]{object-fit:contain!important;object-position:center!important;width:100%;height:100%}
+img[src*="editorial-art-of-attention-cover"]{background:#183e53}
+img[src*="editorial-life-secrets-cover"]{background:#e6bf68}
+img[src*="editorial-man-and-people-guide-cover"],img[src*="editorial-man-and-people-cover"]{background:#e4ddec}
+img[src*="editorial-lead-without-the-noise-cover"]{background:#c7d1bd}
+img[src*="editorial-sneakpeak-ideas-cover"]{background:#eae3cf}
+.editorial-feature{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:30px;align-items:center;margin:24px 0 0;padding:24px 0;border-top:1px solid #e1e4da}
+.editorial-feature h2,.reader-feedback h2{font:400 31px/1.13 OPortalsBook,Georgia,serif;letter-spacing:-.5px;margin:8px 0 12px}
+.editorial-feature p{font-size:15px;line-height:1.5;max-width:470px;color:#59616a;margin:9px 0}
+.editorial-feature .editorial-format{font-size:12px;color:#68734b}
+.editorial-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.editorial-actions a{display:inline-flex;align-items:center;justify-content:center}
+.editorial-spread{margin:0;min-width:0}
+.editorial-spread>a{display:flex;gap:7px;justify-content:center;padding:14px;background:#f0f1eb;border:1px solid #e1e4da;border-radius:6px;text-decoration:none}
+.editorial-spread img{display:block;width:calc(50% - 4px);height:auto;max-height:305px;object-fit:contain;background:white}
+.editorial-spread figcaption{font-size:12px;line-height:1.4;color:#626975;margin-top:8px}
+.reader-feedback{padding:18px 0 22px;border-top:1px solid #e1e4da}
+.reader-feedback h2{font-size:26px;margin-bottom:7px}
+.reader-feedback-note{font-size:12px;color:#626975;line-height:1.45;margin:0 0 13px}
+.reader-feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.reader-feedback-grid article{border-left:2px solid #b9c7a8;padding:2px 0 2px 13px}
+.reader-feedback-grid h3{font:400 22px/1.2 OPortalsBook,Georgia,serif;margin:0 0 7px}
+.reader-feedback-grid p{font-size:14px;line-height:1.5;margin:0;color:#59616a}
+.editorial-owner-review{font-size:12px;line-height:1.5;color:#59616a}.editorial-owner-review a{color:#435443}
+@media(max-width:700px){.product .cover-shelf:has(img[src*="editorial-"]){height:185px}.editorial-feature{grid-template-columns:1fr;gap:16px;padding:20px 0;margin-top:18px}.editorial-feature h2{font-size:27px}.editorial-feature p{font-size:14px}.editorial-spread img{max-height:235px}.editorial-spread>a{padding:10px}.editorial-actions{gap:7px}.editorial-actions a{font-size:13px!important;min-height:44px}.reader-feedback-grid{grid-template-columns:1fr;gap:13px}.reader-feedback h2{font-size:25px}.reader-feedback-grid h3{font-size:21px}}
