@@ -55,3 +55,5 @@ s=p.read_text().replace("<body>","<body>"+'<aside class="social-mirror-bar" aria
 p.write_text(s)
 
 subprocess.run(["node",str(R/"scripts/apply-readability.cjs")],check=True,cwd=R)
+
+subprocess.run(["node",str(R/"scripts/apply-cx.cjs")],check=True,cwd=R)

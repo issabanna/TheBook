@@ -1,0 +1,1 @@
+const fs=require('node:fs'),p='public/testing-next.html';let s=fs.readFileSync(p,'utf8').replace(/<style id="cx-improvements">[\s\S]*?<\/style>/,'');s=s.replace("href=\"'+b.pdf+'\">Read for Free ↗", "href=\"'+b.pdf+'\">Download free PDF ↓");s=s.replace('</head>','<style id="cx-improvements">'+fs.readFileSync('public/cx.css','utf8')+'</style></head>');fs.writeFileSync(p,s);
