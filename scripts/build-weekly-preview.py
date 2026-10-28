@@ -59,3 +59,5 @@ subprocess.run(["node",str(R/"scripts/apply-readability.cjs")],check=True,cwd=R)
 subprocess.run(["node",str(R/"scripts/apply-cx.cjs")],check=True,cwd=R)
 
 subprocess.run(["node",str(R/"scripts/apply-editorial-preview.cjs")],check=True,cwd=R)
+
+subprocess.run(["python3",str(R/"scripts/apply-postcard-samples.py")],check=True,cwd=R)
