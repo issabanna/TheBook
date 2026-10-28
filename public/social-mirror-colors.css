@@ -33,3 +33,5 @@
 #social-mirror-section .reflection-example-layout>.reflection-create{order:-1;margin:0 0 12px}#social-mirror-section .reflection-create #sample-start{margin:0}
 
 #social-mirror-section .reflection-wordmark .brand{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:900;letter-spacing:-1px;color:#303030;white-space:nowrap;line-height:1.4}#social-mirror-section .reflection-wordmark .brand b{color:var(--olive)}@media(max-width:500px){#social-mirror-section .reflection-wordmark .brand{font-size:18px;letter-spacing:-.8px}}
+/* Scores should be clear without overpowering the trait label. */
+#social-mirror-section .reflection-score{font-weight:400}
