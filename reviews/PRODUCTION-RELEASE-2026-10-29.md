@@ -41,6 +41,12 @@ Social Mirror client was exercised with the real handler and an in-memory
 database: invitation creation, social sharing URL, five votes, results card and
 share/download controls. No real payment or actual mobile browser test was run.
 
+The first deployment exceeded the host's uncompressed Worker limit. The build
+now emits identical encrypted PDF records once while retaining independent
+production and Testing file tables. All records were compared byte for byte
+after bundling; the resulting Worker is 44.3 MiB. A build-time size check prevents
+an oversized artifact from reaching publication. No PDF or image was recompressed.
+
 ## Rollback
 
 Immediately preceding hosted version **148**, commit
