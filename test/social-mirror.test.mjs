@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import {readFileSync} from 'node:fs';import {socialMirrorApi} from '../src/social-mirror.mjs';
+import {createHandler} from '../src/worker.mjs';
 function db(){const d=new DatabaseSync(':memory:');d.exec(readFileSync('drizzle/0004_social_mirror.sql','utf8'));d.exec(readFileSync('drizzle/0005_social_mirror_questions.sql','utf8'));d.exec(readFileSync('drizzle/0006_social_mirror_purchases.sql','utf8'));return {prepare(sql){let params=[];return {bind(...v){params=v;return this},async first(){return d.prepare(sql).get(...params)||null},async all(){return {results:d.prepare(sql).all(...params)}},async run(){return {meta:{changes:d.prepare(sql).run(...params).changes}}}}},async batch(queries){return Promise.all(queries.map(q=>q.run()))}}}
 const origin='https://oportals.com',base=origin+'/Testing/SocialMirror/api',answers=[0,0,1,0,2,1];
 const req=(path,method='GET',body,headers={})=>new Request(base+path,{method,headers:{origin,'Content-Type':'application/json',...headers},...(body?{body:JSON.stringify(body)}:{})});
@@ -12,3 +13,30 @@ test('six-category reports exclude unobserved answers and require a unique verif
  assert.equal((await socialMirrorApi(req(p.path+'/analysis','POST',{transaction:'WRONGPRICE123'},p.auth),env,verified)).status,400);const unlocked=await socialMirrorApi(req(p.path+'/analysis','POST',{transaction:'PAYMENT123456'},p.auth),env,verified);assert.equal(unlocked.status,200);const data=await unlocked.json();assert.equal(data.report.sections.length,6);assert.equal(data.report.sections[0].percentage,100);assert.equal(data.report.sections[5].percentage,null);assert.equal((await socialMirrorApi(req(p.path+'/analysis'),env)).status,403);const other=await create();for(let i=0;i<5;i++)await socialMirrorApi(req(other.path+'/respond','POST',{answers:scores}),env);assert.equal((await socialMirrorApi(req(other.path+'/analysis','POST',{transaction:'PAYMENT123456'},other.auth),env,verified)).status,409);assert.equal((await socialMirrorApi(req(p.path+'/manage','DELETE',undefined,p.auth),env)).status,200);assert.equal((await env.DB.prepare('SELECT profile_id FROM social_mirror_purchases WHERE transaction_id=?').bind('PAYMENT123456').first()).profile_id.startsWith('deleted:'),true);
 });
 test('friend-only profiles create a link without self answers and retain six-category responses',async()=>{const env={DB:db(),DOWNLOAD_SIGNING_KEY:'test'};const r=await socialMirrorApi(req('/profile','POST',{name:'Natali',version:3,answers:null}),env);assert.equal(r.status,201);const owner=await r.json(),path='/profile/'+owner.id,auth={authorization:'Bearer '+owner.secret};const visible=await (await socialMirrorApi(req(path),env)).json();assert.equal(visible.version,3);for(let i=0;i<5;i++)assert.equal((await socialMirrorApi(req(path+'/respond','POST',{answers:[3,2,1,3,4,2]}),env)).status,201);const result=await (await socialMirrorApi(req(path+'/manage','GET',undefined,auth),env)).json();assert.equal(result.self,null);assert.equal(result.responseCount,5);assert.equal(result.aggregate[0][3],5);assert.equal(result.aggregate[4][4],5);});
+
+test('production Social Mirror routes persist anonymous votes, protect results and unlock after five responses',async()=>{
+ const env={DB:db(),DOWNLOAD_SIGNING_KEY:'test'};
+ const published=readFileSync('public/social-mirror-published.html','utf8');
+ assert.ok(published.includes("base='/SocialMirror'"));assert.ok(!published.includes('/Testing'));
+ assert.match(published,/class="brand" href="\/"/);assert.ok(published.includes('href="/#books"'));
+ const h=createHandler({socialMirrorPublished:published,socialMirror:'Testing Social Mirror'});
+ assert.equal((await h(new Request(origin+'/SocialMirror'),env)).status,200);
+ const paymentReturn=await (await h(new Request(origin+'/paypal/return'),env)).text();assert.ok(paymentReturn.includes("location.assign('/SocialMirror?payment=1')"));assert.ok(!paymentReturn.includes('/Testing/SocialMirror'));
+ assert.equal(await (await h(new Request(origin+'/Testing/SocialMirror'),env)).text(),'Testing Social Mirror');
+ const request=(path,method='GET',body,headers={})=>new Request(origin+'/SocialMirror/api'+path,{method,headers:{origin,'Content-Type':'application/json',...headers},...(body?{body:JSON.stringify(body)}:{})});
+ const created=await h(request('/profile','POST',{name:'Preview Reader',version:3,answers:null}),env);
+ assert.equal(created.status,201);assert.match(created.headers.get('set-cookie'),/Path=\/;.*Secure; HttpOnly/);
+ const cookie=created.headers.get('set-cookie').split(';')[0],owner=await created.json(),path='/profile/'+owner.id,auth={authorization:'Bearer '+owner.secret};
+ const publicResult=await (await h(request(path),env)).json();assert.equal(publicResult.name,'Preview Reader');assert.equal(publicResult.secret,undefined);assert.equal(publicResult.aggregate,undefined);
+ assert.equal((await h(request(path+'/manage'),env)).status,403);
+ assert.equal((await h(request(path+'/respond','POST',{answers:[3,2,1,3,4,2]},{cookie}),env)).status,403);
+ for(let i=0;i<5;i++){
+  const vote=await h(request(path+'/respond','POST',{answers:[3,2,1,3,4,2]}),env);assert.equal(vote.status,201);
+  if(i===0)assert.equal((await h(request(path+'/respond','POST',{answers:[3,2,1,3,4,2]},{cookie:vote.headers.get('set-cookie').split(';')[0]}),env)).status,409);
+  const result=await (await h(request(path+'/manage','GET',undefined,auth),env)).json();assert.equal(result.responseCount,i+1);assert.equal(!!result.aggregate,i>=4);
+ }
+ assert.equal((await h(request(path+'/manage','PATCH',{closed:true},auth),env)).status,200);
+ assert.equal((await h(request(path+'/respond','POST',{answers:[3,2,1,3,4,2]}),env)).status,409);
+ assert.equal((await h(request(path+'/manage','DELETE',undefined,auth),env)).status,200);
+ assert.equal((await h(request(path),env)).status,404);
+});

@@ -46,8 +46,8 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
-   if(path.startsWith('/Testing/SocialMirror/api/'))return socialMirrorApi(request,env,fetcher);
-   if(path==='/Testing/SocialMirror'||path==='/Testing/SocialMirror/'){if(!assets.socialMirror)return htmlResponse(page('Not found','Page not found.'),404);return new Response(request.method==='HEAD'?null:assets.socialMirror,{headers:{...headers,'Content-Security-Policy':headers['Content-Security-Policy']+"; font-src 'self' data:",'Content-Type':'text/html; charset=utf-8','X-Robots-Tag':'noindex, nofollow'}});}
+   if(path.startsWith('/Testing/SocialMirror/api/')||path.startsWith('/SocialMirror/api/'))return socialMirrorApi(request,env,fetcher);
+   if(['/Testing/SocialMirror','/Testing/SocialMirror/','/SocialMirror','/SocialMirror/'].includes(path)){const mirror=path.startsWith('/Testing/')?assets.socialMirror:assets.socialMirrorPublished;if(!mirror)return htmlResponse(page('Not found','Page not found.'),404);return new Response(request.method==='HEAD'?null:mirror,{headers:{...headers,'Content-Security-Policy':headers['Content-Security-Policy']+"; font-src 'self' data:",'Content-Type':'text/html; charset=utf-8','X-Robots-Tag':'noindex, nofollow'}});}
    if(live&&/^\/Testing\/checkout\/(?:life-secrets|art-of-attention|lead-without-the-noise|man-and-people)$/.test(path))return new Response(null,{status:303,headers:{...headers,Location:'/checkout?book='+path.split('/').pop()}});
    if(path==='/Testing' || path.startsWith('/Testing/')) {
     const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'; font-src 'self' data:",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
@@ -84,6 +84,7 @@ export function createHandler(assets, fetcher = fetch) {
      const result=await previewMetrics(env);return new Response(request.method==='HEAD'?null:result.body,{status:result.status,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }
     if(path.startsWith('/Testing/media/')){
+     const publishedName=path.slice('/Testing/media/'.length);if(live&&Object.hasOwn(assets.publishedMedia||{},publishedName))return new Response(request.method==='HEAD'?null:fromBase64(assets.publishedMedia[publishedName]),{headers:{...privateHeaders,'Content-Type':'image/webp'}});
      const name=path.slice('/Testing/media/'.length);if((!live||assets.publishedDraft)&&Object.hasOwn(assets.draftMedia||{},name))return new Response(request.method==='HEAD'?null:fromBase64(assets.draftMedia[name]),{headers:{...privateHeaders,'Content-Type':'image/webp'}});const file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
      if(!file)return new Response('Image not found',{status:404,headers:privateHeaders});
      const key=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(file.keyEnv)?env[file.keyEnv]:null;
@@ -157,7 +158,7 @@ export function createHandler(assets, fetcher = fetch) {
     return new Response(null,{status:303,headers:{...headers,Location:product.link}});
    }
    if(request.method!=='GET' && request.method!=='HEAD')return json({error:'Method not allowed.'},405);
-   if(path==='/paypal/return')return htmlResponse(receiptPage);
+   if(path==='/paypal/return')return htmlResponse(assets.socialMirrorPublished?receiptPage.replaceAll('/Testing/SocialMirror','/SocialMirror'):receiptPage);
    if(path==='/Life-Secrets-Sample.pdf')return new Response(request.method==='HEAD'?null:fromBase64(assets.sample),{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'inline; filename="Life-Secrets-Sample.pdf"'}});
    if(path==='/favicon.svg' || path==='/oportals-mark.svg')return new Response(assets.logo,{headers:{...headers,'Content-Type':'image/svg+xml'}});
    if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /Testing\nDisallow: /testing\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
