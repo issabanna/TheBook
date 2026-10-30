@@ -1,0 +1,10 @@
+{
+  "label": "Before social-media theme reference",
+  "saved_at": "2026-10-30",
+  "version_number": 150,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_a24873dd03948191b5d1a4e783217611",
+  "commit_sha": "ce654ad7f07a854805264f3af31cee4ed82e1b81",
+  "git_tag": "before-social-theme-2026-10-30",
+  "scope": "Rollback the Testing social-theme experiment; production content is unchanged by the experiment."
+}
