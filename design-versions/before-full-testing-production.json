@@ -1,0 +1,10 @@
+{
+  "label": "Before publishing the complete Testing collection and modern Social Mirror controls",
+  "saved_at": "2026-10-31",
+  "version_number": 154,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_ed4afe1e2c2481918dbb3af8302da2a6",
+  "commit_sha": "887195ba6a7d574a8662af0778d5cd58dea3792c",
+  "git_tag": "before-full-testing-production-2026-10-31",
+  "scope": "Restore the previous production snapshots while retaining the latest Testing books and Social Mirror controls. Original logo retained."
+}
