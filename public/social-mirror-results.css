@@ -1,0 +1,27 @@
+/* Results chrome only. The shareable card remains the approved card design. */
+#social-mirror-section #results{max-width:1040px;margin:0 auto;padding:4px 0 12px}
+#social-mirror-section #results .sm-results-intro{max-width:950px;margin:0 auto 20px}
+#social-mirror-section #results .sm-results-intro .eyebrow{font:700 10px/1.5 Arial,Helvetica,sans-serif;letter-spacing:1.6px;color:#68734b}
+#social-mirror-section #results #results-title{font:700 clamp(23px,3vw,30px)/1.2 Arial,Helvetica,sans-serif;letter-spacing:-.7px;color:#252d35;margin:8px 0}
+#social-mirror-section #results #result-summary{font:400 13px/1.6 Arial,Helvetica,sans-serif;color:#68737a;max-width:760px;margin:0}
+#social-mirror-section #results #real-reflection-card .reflection-card{border-color:#e1e7df;border-radius:14px;box-shadow:0 8px 32px rgba(21,46,77,.035)}
+#social-mirror-section #results .sm-results-toolbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:min(100%,404px);margin:16px auto 0;padding:7px;background:#f7f9f5;border:1px solid #e5eae1;border-radius:16px;box-sizing:border-box}
+#social-mirror-section #results .sm-result-action{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-width:0;width:100%;max-width:100%;min-height:70px;margin:0;padding:10px 3px;border:1px solid transparent;border-radius:10px;background:transparent;color:#4b5a45;font:600 12px/1.2 Arial,Helvetica,sans-serif;text-decoration:none;cursor:pointer;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+#social-mirror-section #results .sm-result-action svg{display:block;flex:none;width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#social-mirror-section #results .sm-result-action span{white-space:nowrap}
+#social-mirror-section #results .sm-result-share{background:#e0ecd6;border-color:#c7d8ba;color:#2e4528}
+#social-mirror-section #results .sm-result-action:hover{background:#edf1e8;border-color:#d8e0d1;color:#263b26}
+#social-mirror-section #results .sm-result-share:hover{background:#d2e3c5;border-color:#b7cda6}
+#social-mirror-section #results .sm-result-action:focus-visible{outline:3px solid #245389;outline-offset:3px}
+#social-mirror-section #results .sm-result-action:active{background:#dce8d3}
+#social-mirror-section #results .sm-result-action[hidden]{display:none!important}
+#social-mirror-section #results #share-status{max-width:950px;margin:10px auto 0;min-height:0;text-align:center;color:#68737a;font:400 12px/1.5 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
+#social-mirror-section #results #share-status:empty{display:none}
+@media(max-width:600px){
+ #social-mirror-section #results .sm-results-intro{margin-bottom:15px}
+ #social-mirror-section #results #results-title{font-size:23px}
+ #social-mirror-section #results #result-summary{font-size:12px;line-height:1.5}
+ #social-mirror-section #results .sm-results-toolbar{margin-top:13px;padding:6px;gap:3px;border-radius:14px}
+ #social-mirror-section #results .sm-result-action{min-height:66px;padding:9px 2px;font-size:11px;gap:7px}
+ #social-mirror-section #results .sm-result-action svg{width:20px;height:20px}
+}

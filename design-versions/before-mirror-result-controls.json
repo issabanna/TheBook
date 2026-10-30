@@ -1,0 +1,10 @@
+{
+  "label": "Before modern compact Social Mirror results controls",
+  "saved_at": "2026-10-31",
+  "version_number": 153,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_d8f186a276948191a61f72e32b1872a7",
+  "commit_sha": "40a6ecbb4e562942a2a1ef140ebd6d8676d51a30",
+  "git_tag": "before-mirror-result-controls-2026-10-31",
+  "scope": "Restore the previous Testing Social Mirror results layout; live snapshots stay unchanged."
+}
