@@ -30,7 +30,7 @@ const payment=await read('src/payment.mjs');
 const worker=(await read('src/worker.mjs')).replace(/^import .*from '\.\/(?:payment|testing-events|contact|free-book-leads|social-mirror|social-mirror-report).mjs';\n/gm,'');
 await mkdir(path.join(root,'dist/server'),{recursive:true});await mkdir(path.join(root,'dist/.openai'),{recursive:true});
 const bundle=payment+'\n'+(await read('src/social-mirror-report.mjs'))+'\n'+(await read('src/social-mirror.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/free-book-leads.mjs'))+'\n'+(await read('src/testing-events.mjs'))+'\n'+(await read('src/contact.mjs'))+'\n'+worker+'\nconst bookAssetRecords='+JSON.stringify(bookAssetRecords)+';\nconst assets='+JSON.stringify(assets)+';\nassets.testingEditionBooks='+testingBookTable+';\nassets.completedBooks='+publishedBookTable+';\nexport default { fetch: createHandler(assets) };\n';
-if(Buffer.byteLength(bundle)>63*1024*1024)throw new Error('Worker exceeds the safe deployment size budget.');
+if(Buffer.byteLength(bundle)>63*1024*1024)throw new Error('Worker exceeds the safe deployment size budget: '+(Buffer.byteLength(bundle)/1024/1024).toFixed(1)+' MiB.');
 await writeFile(path.join(root,'dist/server/index.js'),bundle);
 await writeFile(path.join(root,'dist/.openai/hosting.json'),await read('.openai/hosting.json'));
 console.log('Built Worker: public sales page, free sample, verified checkout and encrypted book.');

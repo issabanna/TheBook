@@ -25,11 +25,11 @@ test('a missing revised-edition key fails closed instead of returning another bo
  assert.equal((await h(new Request(origin+'/Testing/books/art-of-attention-sample.pdf'),env)).status,503);
  assert.equal(await (await h(new Request(origin+'/books/art-of-attention-sample.pdf'),env)).text(),'%PDF Published edition');
 });
-test('social-theme reference PDFs use their separate key and leave the published edition intact',async()=>{
- const {handler:h,env}=await fixture('PREMIUM_POSTER_KEY');
+test('the complete social-theme collection uses its separate key and leaves the published edition intact',async()=>{
+ const {handler:h,env}=await fixture('PREMIUM_COLLECTION_KEY');
  assert.equal(await (await h(new Request(origin+'/Testing/books/art-of-attention-sample.pdf'),env)).text(),'%PDF Revised Testing edition');
  assert.equal(await (await h(new Request(origin+'/books/art-of-attention-sample.pdf'),env)).text(),'%PDF Published edition');
- delete env.PREMIUM_POSTER_KEY;
+ delete env.PREMIUM_COLLECTION_KEY;
  assert.equal((await h(new Request(origin+'/Testing/books/art-of-attention-sample.pdf'),env)).status,503);
  assert.equal(await (await h(new Request(origin+'/books/art-of-attention-sample.pdf'),env)).text(),'%PDF Published edition');
 });
