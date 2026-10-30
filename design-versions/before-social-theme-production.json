@@ -1,0 +1,10 @@
+{
+  "label": "Before publishing the approved social-media design",
+  "saved_at": "2026-10-30",
+  "version_number": 151,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_6ac9461ce1e4819197ca3b2dd11d2f5c",
+  "commit_sha": "e5aaadd168efcbf9492e872eed219b55ea1a3af8",
+  "git_tag": "before-social-theme-production-2026-10-30",
+  "scope": "Restore the previous live design while retaining its approved Testing preview."
+}
