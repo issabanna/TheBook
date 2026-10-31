@@ -57,6 +57,28 @@ test('session date/site filters, distinct page counts and observed duration use 
  assert.equal((await siteSessionsReport(new Request(origin+'/Sessions/data?page=-1'),{DB})).status,400);
  assert.equal((await siteSessionsReport(new Request(origin+'/Sessions/data?from=2026-02-31'),{DB})).status,400);
 });
+test('sorting is numeric, allowlisted and applied before pagination across the full result set',async()=>{
+ const DB=database(),day=visitsDay(),high='00000000-0000-4000-8000-000000000001';
+ fixtureEvent(DB,high,day,day+'T07:00:00Z',1,'page_view','/');
+ for(let i=2;i<=12;i++)fixtureEvent(DB,high,day,day+'T07:01:00Z',i,'click','/','buy:life-secrets');
+ for(let i=2;i<=55;i++)fixtureEvent(DB,'00000000-0000-4000-8000-'+String(i).padStart(12,'0'),day,day+'T10:00:00Z',1,'page_view','/');
+ const read=async query=>{const r=await siteSessionsReport(new Request(origin+'/Sessions/data?'+query),{DB});assert.equal(r.status,200);return r.json();};
+ const initial=await read('');assert.equal(initial.sessions.length,50);assert.ok(!initial.sessions.some(s=>s.id===high));
+ const descending=await read('sort=clicks&direction=desc');assert.equal(descending.sessions[0].id,high);assert.equal(descending.sessions[0].clicks,11);assert.equal(descending.hasMore,true);
+ const ascending=await read('sort=clicks&direction=asc');assert.ok(ascending.sessions.every(s=>s.clicks===0));
+ const second=await read('sort=clicks&direction=asc&page=1');assert.equal(second.sessions.length,5);assert.equal(second.sessions.at(-1).id,high);
+ const firstStarted=await read('sort=started&direction=asc');assert.equal(firstStarted.sessions[0].id,high);
+ const longest=await read('sort=duration&direction=desc');assert.equal(longest.sessions[0].duration_seconds,60);
+ assert.equal((await siteSessionsReport(new Request(origin+'/Sessions/data?sort=clicks%3BDROP+TABLE+site_sessions'),{DB})).status,400);
+ assert.equal((await siteSessionsReport(new Request(origin+'/Sessions/data?direction=DOWN'),{DB})).status,400);
+});
+test('location sorting follows the displayed city/country names instead of country-code order',async()=>{
+ const DB=database(),day=visitsDay();
+ const entries=[['GB','','United Kingdom'],['JO','Amman','Amman'],['CA','','Canada'],['US','','United States']];
+ for(let i=0;i<entries.length;i++){const id=randomUUID();fixtureEvent(DB,id,day,day+'T08:00:00Z',1,'page_view','/');DB.sql.prepare('UPDATE site_sessions SET country=?,city=? WHERE session_id=?').run(entries[i][0],entries[i][1],id);}
+ const data=await (await siteSessionsReport(new Request(origin+'/Sessions/data?sort=location&direction=asc'),{DB})).json();assert.deepEqual(data.sessions.map(s=>s.city||s.country),['Amman','CA','GB','US']);
+ const reverse=await (await siteSessionsReport(new Request(origin+'/Sessions/data?sort=location&direction=desc'),{DB})).json();assert.deepEqual(reverse.sessions.map(s=>s.city||s.country),['US','GB','CA','Amman']);
+});
 test('browser session survives navigation, renews after 30 minutes and clears on opt-out',async()=>{
  const tracker=readFileSync('public/visits-tracking.js','utf8'),store=new Map(),calls=[];
  function browser(path='/',owner=false){
@@ -69,14 +91,17 @@ test('browser session survives navigation, renews after 30 minutes and clears on
  const current=browser('/');current.local.set('oportals-testing-measurement','deny');const n=calls.length;current.click();assert.equal(calls.length,n);assert.equal(store.has('oportals-visit-session-live'),false);
  browser('/',true);assert.equal(store.has('oportals-visit-session-live'),false);
 });
-test('sessions UI opens the selected session and toggles clicks versus full activity',async()=>{
+test('sessions UI toggles sortable headers, opens details and switches activity modes',async()=>{
  const DB=database(),day=visitsDay(),id=randomUUID();fixtureEvent(DB,id,day,day+'T08:00:00Z',1,'page_view','/');fixtureEvent(DB,id,day,day+'T08:01:00Z',2,'click','/','buy:life-secrets');
  const html=readFileSync('public/sessions-dashboard.html','utf8'),{window}=parseHTML(html),document=window.document;
  window.HTMLElement.prototype.focus=function(){};window.HTMLElement.prototype.showModal=function(){this.open=true;};window.HTMLElement.prototype.close=function(){this.open=false;this.dispatchEvent(new window.Event('close'));};
  const select=document.getElementById('site');let selected='live';Object.defineProperty(select,'value',{get(){return selected;},set(v){selected=v;}});
- let current=new URL(origin+'/Sessions');const context={window,document,URLSearchParams,location:{get pathname(){return current.pathname;},get search(){return current.search;}},history:{replaceState(a,b,p){current=new URL(p,origin);}},fetch:async path=>{const url=new URL(path,origin);return url.pathname.includes('/session/')?siteSessionTimeline(new Request(url),{DB},url.pathname.split('/').pop()):siteSessionsReport(new Request(url),{DB});}};
+ let current=new URL(origin+'/Sessions'),requests=[];const context={window,document,URLSearchParams,location:{get pathname(){return current.pathname;},get search(){return current.search;}},history:{replaceState(a,b,p){current=new URL(p,origin);}},fetch:async path=>{requests.push(path);const url=new URL(path,origin);return url.pathname.includes('/session/')?siteSessionTimeline(new Request(url),{DB},url.pathname.split('/').pop()):siteSessionsReport(new Request(url),{DB});}};
  vm.createContext(context);for(const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g))vm.runInContext(m[1],context);
  const settle=async()=>{for(let i=0;i<100;i++)await Promise.resolve();};await settle();assert.equal(document.getElementById('sessions-total').textContent,'1');
+ assert.equal(document.querySelectorAll('button[data-sort]').length,7);assert.equal(document.querySelector('[data-sort-column="started"]').getAttribute('aria-sort'),'descending');
+ const clicks=document.querySelector('button[data-sort="clicks"]');clicks.dispatchEvent(new window.Event('click',{bubbles:true}));await settle();assert.equal(new URL(requests.at(-1),origin).searchParams.get('direction'),'desc');assert.equal(document.querySelector('[data-sort-column="clicks"]').getAttribute('aria-sort'),'descending');
+ clicks.dispatchEvent(new window.Event('click',{bubbles:true}));await settle();assert.equal(new URL(requests.at(-1),origin).searchParams.get('direction'),'asc');assert.equal(document.querySelector('[data-sort-column="clicks"]').getAttribute('aria-sort'),'ascending');assert.equal(document.querySelector('[data-sort-column="started"]').getAttribute('aria-sort'),'none');
  document.querySelector('[data-session] button').dispatchEvent(new window.Event('click',{bubbles:true}));await settle();assert.equal(document.getElementById('session-dialog').open,true);assert.equal(document.querySelectorAll('#timeline .event').length,1);assert.match(document.getElementById('timeline').textContent,/Buy Now/);
  document.getElementById('all-activity').onclick();assert.equal(document.querySelectorAll('#timeline .event').length,2);document.getElementById('close-detail').onclick();assert.equal(document.getElementById('session-dialog').open,false);
 });

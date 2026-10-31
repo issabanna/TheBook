@@ -6,15 +6,28 @@ const sessionColumns='session_id AS id,site,started_day,started_at,last_seen_at,
 export async function siteSessionsReport(request,env){
  let range;try{range=visitsRange(new URL(request.url));}catch(e){return sessionJson({error:e.message},400);}
  const url=new URL(request.url),raw=url.searchParams.get('page')||'0';if(!/^\d{1,4}$/.test(raw)||Number(raw)>2000)return sessionJson({error:'Invalid page.'},400);
+ const sortKey=url.searchParams.get('sort')||'started',direction=url.searchParams.get('direction')||(['session','location'].includes(sortKey)?'asc':'desc');
+ const sortColumns={session:'session_id',location:'location',started:'started_at',last:'last_seen_at',duration:'duration_seconds',pages:'page_views',clicks:'clicks'};
+ if(!Object.hasOwn(sortColumns,sortKey)||!['asc','desc'].includes(direction))return sessionJson({error:'Invalid sort order.'},400);
  if(!env.DB)return sessionJson({error:'Sessions are temporarily unavailable.'},503);
  const {from,to,site}=range,where='started_day BETWEEN ? AND ?'+(site==='all'?'':' AND site=?'),args=site==='all'?[from,to]:[from,to,site],page=Number(raw),limit=50;
  try{
+  let order=sortColumns[sortKey];
+  if(sortKey==='location'){
+   // Sort by the visible English country/city label, rather than ISO code.
+   // Only validated two-letter codes and escaped names from Intl enter SQL.
+   const countries=await env.DB.prepare('SELECT DISTINCT country FROM site_sessions WHERE '+where).bind(...args).all(),names=new Intl.DisplayNames(['en'],{type:'region'});
+   const literal=s=>"'"+s.replaceAll("'","''")+"'";
+   const cases=countries.results.filter(r=>/^[A-Z]{2}$/.test(r.country)).map(r=>'WHEN '+literal(r.country)+' THEN '+literal(r.country==='ZZ'?'Location unavailable':names.of(r.country)||r.country)).join(' ');
+   const countryName=cases?'(CASE country '+cases+' ELSE country END)':"'Location unavailable'";
+   order="(CASE WHEN city<>'' THEN city || CASE WHEN country<>'ZZ' AND country<>'' THEN ', ' || "+countryName+" ELSE '' END ELSE "+countryName+' END) COLLATE NOCASE';
+  }
   const [summary,list,first]=await env.DB.batch([
    env.DB.prepare('SELECT COUNT(*) AS sessions,COALESCE(SUM(page_views),0) AS pageViews,COALESCE(SUM(clicks),0) AS clicks,COALESCE(ROUND(AVG('+sessionDuration+')),0) AS averageSeconds FROM site_sessions WHERE '+where).bind(...args),
-   env.DB.prepare('SELECT '+sessionColumns+' FROM site_sessions WHERE '+where+' ORDER BY started_at DESC,session_id LIMIT ? OFFSET ?').bind(...args,limit,page*limit),
+   env.DB.prepare('SELECT '+sessionColumns+' FROM site_sessions WHERE '+where+' ORDER BY '+order+' '+direction.toUpperCase()+',started_at DESC,session_id ASC,site ASC LIMIT ? OFFSET ?').bind(...args,limit,page*limit),
    env.DB.prepare('SELECT MIN(started_day) AS first_day FROM site_sessions')
   ]);
-  const totals=summary.results[0];return sessionJson({range,summary:totals,sessions:list.results,page,limit,hasMore:(page+1)*limit<Number(totals.sessions),firstDay:first.results[0]?.first_day||null,generatedAt:new Date().toISOString()});
+  const totals=summary.results[0];return sessionJson({range,sort:{key:sortKey,direction},summary:totals,sessions:list.results,page,limit,hasMore:(page+1)*limit<Number(totals.sessions),firstDay:first.results[0]?.first_day||null,generatedAt:new Date().toISOString()});
  }catch{return sessionJson({error:'Sessions are temporarily unavailable. Please try again shortly.'},503);}
 }
 export async function siteSessionTimeline(request,env,id){

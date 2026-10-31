@@ -1,0 +1,10 @@
+{
+  "label": "Before clickable Sessions table sorting",
+  "saved_at": "2026-10-31",
+  "version_number": 159,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_a24e7e11ae5881918c2023cee2eba724",
+  "commit_sha": "3badfeb0e98af39d5aa560bc591a94c1737d4332",
+  "git_tag": "before-session-sorting-2026-10-31",
+  "scope": "Restore the previous Sessions table order. Session records and measurements are preserved."
+}
