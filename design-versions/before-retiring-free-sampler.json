@@ -1,0 +1,10 @@
+{
+  "label": "Before removing the free sampler from public promotion",
+  "saved_at": "2026-10-31",
+  "version_number": 156,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_79bfde65e42c8191b0fdcf605f79a180",
+  "commit_sha": "8e0f931650b6ec669239a12814727df9f5e4b29f",
+  "git_tag": "before-retiring-free-sampler-2026-10-31",
+  "scope": "Restore the public sampler promotions on Testing and production. Existing reader data and book PDFs are unchanged."
+}
