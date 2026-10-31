@@ -1,0 +1,10 @@
+{
+  "label": "Before matching homepage button padding and height",
+  "saved_at": "2026-10-31",
+  "version_number": 155,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_2b1739c0aae08191ba4b20b7d4d69d9e",
+  "commit_sha": "e3329793297bed4faf48e7648b29556094fb989e",
+  "git_tag": "before-hero-button-spacing-2026-10-31",
+  "scope": "Restore the previous homepage button spacing on Testing and production."
+}
