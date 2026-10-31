@@ -1,0 +1,10 @@
+{
+  "label": "Before the private Visits dashboard and daily measurements",
+  "saved_at": "2026-10-31",
+  "version_number": 157,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_f7d9e183b3cc819198390a65f6c67f67",
+  "commit_sha": "12da49373423a64235cd9c375ba0e41b4e2590d2",
+  "git_tag": "before-visits-dashboard-2026-10-31",
+  "scope": "Restore the previous application. The additive daily-measurement table can remain for data preservation; no existing data is changed."
+}
