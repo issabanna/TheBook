@@ -1,8 +1,8 @@
-// Aggregate first-party measurements. No visitor identity or raw URL is stored.
+// First-party measurements: aggregates and optional short-lived anonymous sessions.
 const visitBooks=['life-secrets','art-of-attention','lead-without-the-noise','man-and-people','sneakpeak-ideas','the-philosopher-manager','time-for-what-matters','stand-out-for-something'];
 const visitPages=new Set(['/','/ideas','/SocialMirror',...visitBooks.map(s=>'/book/'+s),...['about','contact','privacy','terms','refunds'].map(s=>'/info/'+s)]);
 const visitSources=new Set(['direct','internal','instagram','facebook','google','search','email','whatsapp','campaign','other']);
-const visitTargets=new Set(['home','ideas','social_mirror','explore_books','our_approach','external_link','paypal_checkout','week_selection',
+const visitTargets=new Set(['home','ideas','social_mirror','explore_books','our_approach','external_link','paypal_checkout','week_selection','button_click','preview_close','preview_page','mirror_paid_close','mirror_pause_examples',
  'mirror_start','mirror_continue','mirror_results','mirror_share_card','mirror_save_card','mirror_paid_offer','mirror_payment','mirror_copy_link','mirror_share_link','mirror_refresh','mirror_back','mirror_close_toggle','mirror_next','mirror_submit','mirror_create_own','mirror_example',
  ...visitBooks.flatMap(s=>['book:'+s,'buy:'+s,'preview:'+s]),...['all','original','inspired'].map(s=>'filter:'+s),...['about','contact','privacy','terms','refunds'].map(s=>'info:'+s)]);
 const visitHeaders={'Cache-Control':'private, no-store','Content-Type':'application/json; charset=utf-8','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff','Vary':'Cookie'};
@@ -22,11 +22,23 @@ export async function recordSiteVisit(request,env){
   const chunks=[];let size=0;while(true){const r=await reader.read();if(r.done)break;size+=r.value.length;if(size>512){await reader.cancel();return visitsJson({error:'Event is too large.'},413);}chunks.push(r.value);}
   const bytes=new Uint8Array(size);let i=0;for(const c of chunks){bytes.set(c,i);i+=c.length;}
   let d;try{d=JSON.parse(new TextDecoder().decode(bytes));}catch{return visitsJson({error:'Invalid event.'},400);}
-  if(!d||Object.keys(d).some(k=>!['event','page','target','source','consent'].includes(k))||d.consent!==true||!['page_view','click'].includes(d.event)||!visitPages.has(d.page)||!visitSources.has(d.source)||!(d.event==='page_view'?d.target==='':visitTargets.has(d.target)))return visitsJson({error:'Invalid event.'},400);
+  if(!d||Object.keys(d).some(k=>!['event','page','target','source','consent','session','sequence','timezone','eventId'].includes(k))||d.consent!==true||!['page_view','click'].includes(d.event)||!visitPages.has(d.page)||!visitSources.has(d.source)||!(d.event==='page_view'?d.target==='':visitTargets.has(d.target)))return visitsJson({error:'Invalid event.'},400);
+  if(d.session!==undefined&&(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(d.session)||typeof d.session!=='string'||!Number.isInteger(d.sequence)||d.sequence<1||d.sequence>10000))return visitsJson({error:'Invalid session.'},400);
+  if(d.eventId!==undefined&&(typeof d.eventId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(d.eventId)))return visitsJson({error:'Invalid event identifier.'},400);
+  if(d.session===undefined&&(d.sequence!==undefined||d.timezone!==undefined||d.eventId!==undefined))return visitsJson({error:'Invalid session.'},400);
+  if(d.timezone!==undefined){if(typeof d.timezone!=='string'||d.timezone.length>64)return visitsJson({error:'Invalid time zone.'},400);try{new Intl.DateTimeFormat('en',{timeZone:d.timezone});}catch{return visitsJson({error:'Invalid time zone.'},400);}}
   if(visitsOwner(request,env))return new Response(null,{status:204,headers:visitHeaders});
   if(!env.DB)return visitsJson({error:'Measurement unavailable.'},503);
-  const now=new Date(),site=new URL(request.url).pathname.startsWith('/Testing/')?'testing':'live',country=/^[A-Z]{2}$/.test(request.cf?.country||'')?request.cf.country:'ZZ';
-  await env.DB.prepare('INSERT INTO site_visits_daily (day,site,event_name,page,target,source,country,event_count,updated_at) VALUES (?,?,?,?,?,?,?,1,?) ON CONFLICT(day,site,event_name,page,target,source,country) DO UPDATE SET event_count=site_visits_daily.event_count+1,updated_at=excluded.updated_at').bind(visitsDay(now),site,d.event,d.page,d.target,d.source,country,now.toISOString()).run();
+  const now=new Date(),site=new URL(request.url).pathname.startsWith('/Testing/')?'testing':'live',geoCountry=request.cf?.country||request.headers.get('cf-ipcountry')||'',country=/^[A-Z]{2}$/.test(geoCountry)?geoCountry:'ZZ';
+  if(d.session){
+   let city=String(request.cf?.city||request.headers.get('cf-ipcity')||'');try{city=decodeURIComponent(city);}catch{}city=city.replace(/[\u0000-\u001f\u007f]/g,'').slice(0,80);
+   const id=d.session.toLowerCase(),day=visitsDay(now),at=now.toISOString();
+   // The event-insert trigger updates session and daily totals only once per event identifier.
+   await env.DB.batch([
+    env.DB.prepare('INSERT OR IGNORE INTO site_sessions (site,session_id,started_day,started_at,last_seen_at,country,city,timezone,source,first_page,last_page) VALUES (?,?,?,?,?,?,?,?,?,?,?)').bind(site,id,day,at,at,country,city,d.timezone||'',d.source,d.page,d.page),
+    env.DB.prepare('INSERT OR IGNORE INTO site_session_events (site,session_id,event_id,sequence,day,occurred_at,event_name,page,target,source,country) VALUES (?,?,?,?,?,?,?,?,?,?,?)').bind(site,id,(d.eventId||id+':'+d.sequence).toLowerCase(),d.sequence,day,at,d.event,d.page,d.target,d.source,country)
+   ]);
+  }else await env.DB.prepare('INSERT INTO site_visits_daily (day,site,event_name,page,target,source,country,event_count,updated_at) VALUES (?,?,?,?,?,?,?,1,?) ON CONFLICT(day,site,event_name,page,target,source,country) DO UPDATE SET event_count=site_visits_daily.event_count+1,updated_at=excluded.updated_at').bind(visitsDay(now),site,d.event,d.page,d.target,d.source,country,now.toISOString()).run();
   return new Response(null,{status:204,headers:visitHeaders});
  }catch{return visitsJson({error:'Measurement unavailable.'},503);}
 }

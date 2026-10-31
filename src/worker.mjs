@@ -1,3 +1,4 @@
+import {siteSessionsReport,siteSessionTimeline} from './sessions.mjs';
 import {visitsOwner,withVisitsTracking,recordSiteVisit,siteVisitsReport} from './visits.mjs';
 import {socialMirrorApi} from './social-mirror.mjs';
 import {registerFreeBook,freeBookGrant,noteFreeBookDownload,freeBookLeadReport} from './free-book-leads.mjs';
@@ -47,21 +48,24 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
-   if(['/visits','/visits/'].includes(path))return new Response(null,{status:308,headers:{...headers,Location:'/Visits'+url.search}});
-   if(/^\/(?:Testing\/)?Visits(?:\/data)?\/?$/.test(path)){
+   if(['/visits','/visits/','/sessions','/sessions/'].includes(path))return new Response(null,{status:308,headers:{...headers,Location:(path.startsWith('/sessions')?'/Sessions':'/Visits')+url.search}});
+   const reportRoute=path.match(/^\/(?:Testing\/)?(Visits|Sessions)(\/.*)?$/);
+   if(reportRoute){
     const dashboardHeaders={...headers,'Cache-Control':'private, no-store','Vary':'Cookie','X-Robots-Tag':'noindex, nofollow, noarchive'};
-    const dataRoute=/\/data\/?$/.test(path),hasIdentity=!!request.headers.get('oai-authenticated-user-id')&&!!request.headers.get('oai-authenticated-user-email');
+    const isSessions=reportRoute[1]==='Sessions',tail=(reportRoute[2]||'').replace(/\/$/,''),dataRoute=tail==='/data',timelineRoute=isSessions&&tail.startsWith('/session/'),apiRoute=dataRoute||timelineRoute,hasIdentity=!!request.headers.get('oai-authenticated-user-id')&&!!request.headers.get('oai-authenticated-user-email');
     if(!visitsOwner(request,env)){
      const status=hasIdentity?403:401;
-     if(dataRoute)return new Response(JSON.stringify({error:hasIdentity?'This dashboard is restricted to the owner.':'Sign in with your owner account to open this dashboard.'}),{status,headers:{...dashboardHeaders,'Content-Type':'application/json'}});
-     const body=page('Private owner dashboard','<h1>Your website dashboard.</h1><p>Sign in with your OPortals owner account to view visits, previews, Buy Now clicks and Social Mirror activity.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a class="secondary" href="/Visits">Return to the dashboard</a></p>');
+     if(apiRoute)return new Response(JSON.stringify({error:hasIdentity?'This dashboard is restricted to the owner.':'Sign in with your owner account to open this dashboard.'}),{status,headers:{...dashboardHeaders,'Content-Type':'application/json'}});
+     const body=page('Private owner dashboard','<h1>Your website dashboard.</h1><p>Sign in with your OPortals owner account to view visits, previews, Buy Now clicks and Social Mirror activity.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a class="secondary" href="/Visits">Return to the dashboard</a></p>'.replace('href="/Visits"','href="'+(isSessions?'/Sessions':'/Visits')+'"'));
      return new Response(request.method==='HEAD'?null:body,{status,headers:{...dashboardHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }
     if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed.',{status:405,headers:dashboardHeaders});
     if(request.method==='HEAD')return new Response(null,{headers:dashboardHeaders});
-    if(dataRoute){const report=await siteVisitsReport(request,env);return new Response(report.body,{status:report.status,headers:{...dashboardHeaders,...Object.fromEntries(report.headers)}});}
-    if(!assets.visitsDashboard)return new Response('Dashboard unavailable.',{status:503,headers:dashboardHeaders});
-    return new Response(assets.visitsDashboard,{headers:{...dashboardHeaders,'Content-Type':'text/html; charset=utf-8'}});
+    if(apiRoute){const report=timelineRoute?await siteSessionTimeline(request,env,tail.slice(9)):isSessions?await siteSessionsReport(request,env):await siteVisitsReport(request,env);return new Response(report.body,{status:report.status,headers:{...dashboardHeaders,...Object.fromEntries(report.headers)}});}
+    if(tail)return new Response('Not found.',{status:404,headers:dashboardHeaders});
+    const dashboard=isSessions?assets.sessionsDashboard:assets.visitsDashboard;
+    if(!dashboard)return new Response('Dashboard unavailable.',{status:503,headers:dashboardHeaders});
+    return new Response(dashboard,{headers:{...dashboardHeaders,'Content-Type':'text/html; charset=utf-8'}});
    }
    if(['/api/visits-event','/Testing/api/visits-event'].includes(path))return recordSiteVisit(request,env);
    if(path.startsWith('/Testing/SocialMirror/api/')||path.startsWith('/SocialMirror/api/'))return socialMirrorApi(request,env,fetcher);
@@ -179,7 +183,7 @@ export function createHandler(assets, fetcher = fetch) {
    if(path==='/paypal/return')return htmlResponse(assets.socialMirrorPublished?receiptPage.replaceAll('/Testing/SocialMirror','/SocialMirror'):receiptPage);
    if(path==='/Life-Secrets-Sample.pdf')return new Response(request.method==='HEAD'?null:fromBase64(assets.sample),{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'inline; filename="Life-Secrets-Sample.pdf"'}});
    if(path==='/favicon.svg' || path==='/oportals-mark.svg')return new Response(assets.logo,{headers:{...headers,'Content-Type':'image/svg+xml'}});
-   if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /Testing\nDisallow: /testing\nDisallow: /Visits\nDisallow: /visits\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
+   if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /Testing\nDisallow: /testing\nDisallow: /Visits\nDisallow: /visits\nDisallow: /Sessions\nDisallow: /sessions\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
    if(path==='/')return htmlResponse(assets.home);
    return htmlResponse(page('Page not found','<h1>Page not found.</h1><p>Follow the link below to return to the book.</p>'),404);
   } catch(e) {

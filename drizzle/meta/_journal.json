@@ -57,6 +57,13 @@
       "when": 1793404800000,
       "tag": "0007_site_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793457906567,
+      "tag": "0008_site_sessions",
+      "breakpoints": true
     }
   ]
 }

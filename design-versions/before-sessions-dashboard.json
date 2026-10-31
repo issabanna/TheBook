@@ -1,0 +1,10 @@
+{
+  "label": "Before anonymous sessions and per-session click timelines",
+  "saved_at": "2026-10-31",
+  "version_number": 158,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_a6b6838c625481918d87fbe64bdb5271",
+  "commit_sha": "97d2c19b91169bed6f21fb25307ae0869026dc23",
+  "git_tag": "before-sessions-dashboard-2026-10-31",
+  "scope": "Restore aggregate-only measurement and the Visits dashboard. The additive session tables can remain to preserve collected data."
+}

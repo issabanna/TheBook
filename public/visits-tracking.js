@@ -8,14 +8,16 @@
   'share-result':'mirror_share_card','download-card':'mirror_save_card','paid-analysis':'mirror_paid_offer',
   'pay-mirror':'mirror_payment','copy-invite':'mirror_copy_link','copy-invitation':'mirror_copy_link','share-invitation':'mirror_share_link',
   'refresh-results':'mirror_refresh','back-dashboard':'mirror_back','close-reflection':'mirror_close_toggle',
-  'quiz-next':'mirror_next','quiz-submit':'mirror_submit','create-own':'mirror_create_own'
+  'quiz-next':'mirror_next','quiz-submit':'mirror_submit','create-own':'mirror_create_own',
+  'quiz-back':'mirror_back','instructions-back':'mirror_back','return-dashboard':'mirror_back',
+  'close-paid':'mirror_paid_close','close-book-review':'preview_close','pause-examples':'mirror_pause_examples'
  };
  function allowed(){
-  if(window.OPORTALS_OWNER)return false;
+  if(window.OPORTALS_OWNER){clearSession();return false;}
   try{
-   if(localStorage.getItem('oportals-testing-measurement')==='deny')return false;
+   if(localStorage.getItem('oportals-testing-measurement')==='deny'){clearSession();return false;}
    const p=JSON.parse(localStorage.getItem('oportals-analytics-consent-v1'));
-   if(p?.choice==='rejected'&&Date.now()-p.at<180*86400000)return false;
+   if(p?.choice==='rejected'&&Date.now()-p.at<180*86400000){clearSession();return false;}
   }catch{}
   return true;
  }
@@ -43,12 +45,30 @@
   }catch{return 'direct';}
  }
  const acquisition=source(),site=/^\/Testing(?:\/|$)/.test(location.pathname)?'testing':'live';
+ const sessionKey='oportals-visit-session-'+site;let memorySession=null;
+ function clearSession(){memorySession=null;try{sessionStorage.removeItem(sessionKey);}catch{}}
+ function newId(){
+  if(typeof crypto==='undefined')return null;
+  if(crypto.randomUUID)return crypto.randomUUID();
+  const a=crypto.getRandomValues(new Uint8Array(16));a[6]=(a[6]&15)|64;a[8]=(a[8]&63)|128;
+  const h=[...a].map(n=>n.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+ }
+ function session(){
+  const now=Date.now();let s=memorySession;try{s=JSON.parse(sessionStorage.getItem(sessionKey))||s;}catch{}
+  if(!s||typeof s.id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(s.id)||!Number.isFinite(s.last)||now-s.last>=30*60*1000||now<s.last||!Number.isInteger(s.sequence)||s.sequence<0||s.sequence>=10000||!['direct','internal','instagram','facebook','google','search','email','whatsapp','campaign','other'].includes(s.source)){
+   const id=newId();if(!id)return null;s={id,last:now,sequence:0,source:acquisition};
+  }
+  s.last=now;s.sequence++;memorySession=s;try{sessionStorage.setItem(sessionKey,JSON.stringify(s));}catch{}
+  let timezone='';try{timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch{}
+  const eventId=newId();return {session:s.id,sequence:s.sequence,...(eventId?{eventId}:{}),source:s.source,...(timezone?{timezone}:{})};
+ }
  function send(event,target=''){
   const p=page();if(!p||!allowed())return;
-  // Only approved page paths and action labels. No names, answers, tokens or emails.
+  const identity=session();
+  // Only approved pages/actions plus a short anonymous session. Never private URLs.
   fetch((site==='testing'?'/Testing':'')+'/api/visits-event',{
    method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({event,page:p,target,source:acquisition,consent:true})
+   body:JSON.stringify({event,page:p,target,source:acquisition,consent:true,...(identity||{})})
   }).catch(()=>{});
  }
  let lastPage=null;
@@ -59,12 +79,14 @@
  window.addEventListener('popstate',view);view();
  document.addEventListener('click',event=>{
   const el=event.target.closest?.('a,button');if(!el)return;
+  if(['privacy-settings','measurement-accept','measurement-reject','analytics-settings','analytics-accept','analytics-reject'].includes(el.id)||el.classList.contains('close-measurement'))return;
   if(ids[el.id])return send('click',ids[el.id]);
   if(el.matches('[data-filter]')&&['all','original','inspired'].includes(el.dataset.filter))return send('click','filter:'+el.dataset.filter);
   if(el.matches('[data-week]'))return send('click','week_selection');
+  if(el.matches('[data-page]'))return send('click','preview_page');
   if(el.closest('.card-example-picker'))return send('click','mirror_example');
   if(el.matches('[data-sample]')&&slugs.includes(el.dataset.sample))return send('click','preview:'+el.dataset.sample);
-  if(el.tagName!=='A')return;
+  if(el.tagName!=='A')return send('click','button_click');
   let u;try{u=new URL(el.getAttribute('href')||'',location.origin);}catch{return;}
   if(u.origin!==location.origin){
    if(u.hostname==='www.paypal.com'||u.hostname==='paypal.com')return send('click','paypal_checkout');
