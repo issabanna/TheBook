@@ -1,7 +1,8 @@
+// Admin form pages use same-origin referrers: no-referrer makes browser POST Origin null.
 // Password access supplements the trusted Sites owner identity. Secrets stay server-side.
 const adminCookieName='__Host-oportals-admin';
 const adminLifetime=8*60*60;
-const adminPrivateHeaders={'Cache-Control':'private, no-store','Vary':'Cookie','X-Robots-Tag':'noindex, nofollow, noarchive','Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"};
+const adminPrivateHeaders={'Cache-Control':'private, no-store','Vary':'Cookie','X-Robots-Tag':'noindex, nofollow, noarchive','Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"};
 const adminHex=bytes=>Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');
 const adminBytes=hex=>Uint8Array.from(hex.match(/../g)||[],v=>parseInt(v,16));
 async function adminMac(value,secret){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return adminHex(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value)));}
@@ -27,7 +28,7 @@ export async function adminAuthRoute(request,env){
  if(url.pathname==='/admin/login'&&['GET','HEAD'].includes(request.method))return response(adminLoginPage(next));
  if(!['/admin/login','/admin/logout'].includes(url.pathname))return response('Not found.',404);
  if(request.method!=='POST')return response('Method not allowed.',405,{Allow:url.pathname==='/admin/login'?'GET, HEAD, POST':'POST'});
- if(request.headers.get('origin')!==url.origin)return response('Origin not allowed.',403);
+ if(request.headers.get('origin')!==url.origin)return response(adminLoginPage(next,'Please reload this sign-in page and try again.'),403);
  if(url.pathname==='/admin/logout')return response(null,303,{Location:'/admin/login','Set-Cookie':adminCookieName+'=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0'});
  if(!env.ADMIN_PASSWORD_HASH||!env.ADMIN_SESSION_KEY||!env.DB)return response(adminLoginPage(next,'Admin sign-in is temporarily unavailable.'),503);
  if(!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded'))return response('Use the sign-in form.',415);

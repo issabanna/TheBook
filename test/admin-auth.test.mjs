@@ -19,7 +19,7 @@ test('password login returns a secure eight-hour session and restores the reques
  const set=login.headers.get('set-cookie');for(const flag of ['__Host-','Secure','HttpOnly','SameSite=Strict','Path=/','Max-Age=28800'])assert.ok(set.includes(flag));
  const cookie=cookieOf(login);assert.equal(await adminSession(new Request(origin,{headers:{cookie}}),env),true);
  for(const path of ['/Visits','/Sessions','/Testing/Visits','/Testing/Sessions','/Visits/data','/Sessions/data','/Testing']){
-  const r=await h(new Request(origin+path,{headers:{cookie}}),env);assert.equal(r.status,200,path);assert.match(r.headers.get('cache-control'),/no-store/);
+  const r=await h(new Request(origin+path,{headers:{cookie}}),env);assert.equal(r.status,200,path);assert.match(r.headers.get('cache-control'),/no-store/);if(!path.includes('/data'))assert.equal(r.headers.get('referrer-policy'),'same-origin',path+' must preserve browser form Origin');
   if(path==='/Visits')assert.match(await r.text(),/Sign out of admin/);
   if(path==='/Testing')assert.match(await r.text(),/OPORTALS_OWNER=true/);
  }
@@ -53,6 +53,22 @@ test('login and logout require same-origin POST and logout clears the session co
 });
 test('login pages preserve only safe local destinations and keep credentials out of HTML',async()=>{
  const env=fixture();for(const path of ['https://evil.example','//evil.example','/Testing\\evil','/Testing\nLocation:evil','/Testing\"><script>','/admin/login'])assert.equal(adminReturnPath(path),'/Visits');
- const r=await adminAuthRoute(new Request(origin+'/admin/login?next='+encodeURIComponent('/Sessions?site=all&sort=pages')),env),html=await r.text();assert.equal(r.status,200);assert.match(html,/\/Sessions\?site=all&amp;sort=pages/);assert.ok(html.includes('autocomplete="current-password"'));assert.ok(html.includes('Sign in with ChatGPT'));assert.ok(!html.includes(password));assert.ok(!html.includes(env.ADMIN_PASSWORD_HASH));assert.ok(!html.includes('visits-tracking'));assert.match(r.headers.get('x-robots-tag'),/noindex/);
+ const r=await adminAuthRoute(new Request(origin+'/admin/login?next='+encodeURIComponent('/Sessions?site=all&sort=pages')),env),html=await r.text();assert.equal(r.status,200);assert.equal(r.headers.get('referrer-policy'),'same-origin');assert.match(html,/\/Sessions\?site=all&amp;sort=pages/);assert.ok(html.includes('autocomplete="current-password"'));assert.ok(html.includes('Sign in with ChatGPT'));assert.ok(!html.includes(password));assert.ok(!html.includes(env.ADMIN_PASSWORD_HASH));assert.ok(!html.includes('visits-tracking'));assert.match(r.headers.get('x-robots-tag'),/noindex/);
  const login=await adminAuthRoute(post({next:'https://evil.example'}),env);assert.equal(login.headers.get('location'),'/Visits');
+});
+
+test('all embedded admin forms preserve browser POST origin and still reject null or foreign origins',async()=>{
+ const env=fixture(),h=createHandler({testing:{keyEnv:'PREVIEW_V5_KEY',publicPreview:true,liveStorefront:true},testingDraft:'<body><footer></footer><script></script></body>'});
+ for(const path of ['/Visits','/Sessions','/Testing/Visits','/Testing/Sessions','/Testing/contact-inbox','/contact-inbox']){
+  const r=await h(new Request(origin+path),env),html=await r.text();assert.equal(r.status,401);assert.ok(html.includes('action="/admin/login"'));assert.equal(r.headers.get('referrer-policy'),'same-origin',path);assert.ok(!html.includes('<meta name="referrer" content="no-referrer">'));
+ }
+ for(const from of ['null','','https://evil.example']){
+  const r=await adminAuthRoute(post({}, {origin:from}),env);assert.equal(r.status,403);assert.equal(r.headers.get('set-cookie'),null);assert.ok((await r.text()).includes('Please reload this sign-in page'));
+ }
+ const loginPage=await adminAuthRoute(new Request(origin+'/admin/login'),env);
+ // A browser following same-origin retains its origin for the form POST.
+ // With the former no-referrer header, that POST has the literal Origin: null.
+ const browserOrigin=loginPage.headers.get('referrer-policy')==='no-referrer'?'null':origin;
+ const login=await adminAuthRoute(post({}, {origin:browserOrigin}),env);assert.equal(login.status,303);
+ assert.equal(env.DB.sql.prepare('SELECT SUM(request_count) AS n FROM contact_limits').get().n,1);
 });
