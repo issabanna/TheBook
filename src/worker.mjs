@@ -1,3 +1,4 @@
+import {adminAuthRoute,adminLoginPage,adminSession,adminSignOutControl} from './admin-auth.mjs';
 import {siteSessionsReport,siteSessionTimeline} from './sessions.mjs';
 import {visitsOwner,withVisitsTracking,recordSiteVisit,siteVisitsReport} from './visits.mjs';
 import {socialMirrorApi} from './social-mirror.mjs';
@@ -48,15 +49,16 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env) {
   const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
+   if(path.startsWith('/admin/'))return adminAuthRoute(request,env);
    if(['/visits','/visits/','/sessions','/sessions/'].includes(path))return new Response(null,{status:308,headers:{...headers,Location:(path.startsWith('/sessions')?'/Sessions':'/Visits')+url.search}});
    const reportRoute=path.match(/^\/(?:Testing\/)?(Visits|Sessions)(\/.*)?$/);
    if(reportRoute){
     const dashboardHeaders={...headers,'Cache-Control':'private, no-store','Vary':'Cookie','X-Robots-Tag':'noindex, nofollow, noarchive'};
     const isSessions=reportRoute[1]==='Sessions',tail=(reportRoute[2]||'').replace(/\/$/,''),dataRoute=tail==='/data',timelineRoute=isSessions&&tail.startsWith('/session/'),apiRoute=dataRoute||timelineRoute,hasIdentity=!!request.headers.get('oai-authenticated-user-id')&&!!request.headers.get('oai-authenticated-user-email');
-    if(!visitsOwner(request,env)){
+    if(!await visitsOwner(request,env)){
      const status=hasIdentity?403:401;
      if(apiRoute)return new Response(JSON.stringify({error:hasIdentity?'This dashboard is restricted to the owner.':'Sign in with your owner account to open this dashboard.'}),{status,headers:{...dashboardHeaders,'Content-Type':'application/json'}});
-     const body=page('Private owner dashboard','<h1>Your website dashboard.</h1><p>Sign in with your OPortals owner account to view visits, previews, Buy Now clicks and Social Mirror activity.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a class="secondary" href="/Visits">Return to the dashboard</a></p>'.replace('href="/Visits"','href="'+(isSessions?'/Sessions':'/Visits')+'"'));
+     const body=adminLoginPage(url.pathname+url.search);
      return new Response(request.method==='HEAD'?null:body,{status,headers:{...dashboardHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }
     if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed.',{status:405,headers:dashboardHeaders});
@@ -65,7 +67,7 @@ export function createHandler(assets, fetcher = fetch) {
     if(tail)return new Response('Not found.',{status:404,headers:dashboardHeaders});
     const dashboard=isSessions?assets.sessionsDashboard:assets.visitsDashboard;
     if(!dashboard)return new Response('Dashboard unavailable.',{status:503,headers:dashboardHeaders});
-    return new Response(dashboard,{headers:{...dashboardHeaders,'Content-Type':'text/html; charset=utf-8'}});
+    return new Response(await adminSession(request,env)?dashboard.replace('</header>','</header><div style="max-width:1200px;margin:auto;padding:0 20px">'+adminSignOutControl()+'</div>'):dashboard,{headers:{...dashboardHeaders,'Content-Type':'text/html; charset=utf-8'}});
    }
    if(['/api/visits-event','/Testing/api/visits-event'].includes(path))return recordSiteVisit(request,env);
    if(path.startsWith('/Testing/SocialMirror/api/')||path.startsWith('/SocialMirror/api/'))return socialMirrorApi(request,env,fetcher);
@@ -79,13 +81,13 @@ export function createHandler(assets, fetcher = fetch) {
     if(!previewKey)return privatePage(page('Private preview','<h1>Private studio preview.</h1><p>This preview is not available yet.</p>'),503);
     const viewer=request.headers.get('oai-authenticated-user-email');
     const viewerId=request.headers.get('oai-authenticated-user-id');
-    const isOwner=!!viewerId&&!!viewer&&!!env.PREVIEW_OWNER_EMAIL&&viewer.trim().toLowerCase()===env.PREVIEW_OWNER_EMAIL.trim().toLowerCase();
+    const isOwner=await visitsOwner(request,env);
     const gatedFreeBook=(!live||assets.publishedDraft)&&!!assets.testingDraft&&path==='/Testing/books/sneakpeak-ideas.pdf';const freeGrant=gatedFreeBook?await freeBookGrant(request,env):null;if(gatedFreeBook&&!freeGrant&&!isOwner)return new Response(null,{status:303,headers:{...privateHeaders,Location:(live?'':'/Testing')+'/book/sneakpeak-ideas?get=1'}});
     const publicFiles=new Set(["the-philosopher-manager-sample.pdf","lead-without-the-noise-sample.pdf","time-for-what-matters-sample.pdf","stand-out-for-something-sample.pdf",'sneakpeak-ideas.pdf','life-secrets-sample.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf']);
     if(assets.testing?.temporaryDownloads===true)for(const name of ['life-secrets.pdf','art-of-attention.pdf','man-and-people-guide.pdf','the-philosopher-manager.pdf','lead-without-the-noise.pdf','time-for-what-matters.pdf','stand-out-for-something.pdf'])publicFiles.add(name);
     const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/leads','/Testing/leads.csv','/Testing/metrics','/Testing/downloads','/Testing/downloads.json','/Testing/contact-inbox','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
     if(ownerOnly&&!isOwner){
-     if(!viewer||!viewerId)return privatePage(page('Owner access','<h1>Owner access required.</h1><p>The storefront and free samples are open to everyone. Reports and full paid-book review files require the owner account.</p><p><a href="/signin-with-chatgpt" target="_top">Sign in with ChatGPT</a></p><p><a href="/Testing">Back to the bookstore</a></p>'),401);
+     if(!viewer||!viewerId)return privatePage(adminLoginPage(url.pathname+url.search),401);
      return privatePage(page('Owner access','<h1>Owner access required.</h1><p><a href="/Testing">Back to the bookstore</a></p>'),403);
     }
     if((!live||assets.publishedDraft)&&assets.testingDraft&&path==='/Testing/api/free-book')return registerFreeBook(request,env);
@@ -139,7 +141,7 @@ export function createHandler(assets, fetcher = fetch) {
     if(!['/Testing','/Testing/'].includes(path)&&!(path==='/Testing/ideas'&&(!live||assets.publishedDraft)&&assets.testingDraft)&&!isInfo&&!(route&&previewBookSlugs.includes(route[2])&&(route[1]!=='checkout'||['life-secrets','art-of-attention','man-and-people','lead-without-the-noise'].includes(route[2]))))return privatePage(page('Not found','<h1>Page not found.</h1><p><a href="/Testing">Return to the bookshelf</a></p>'),404);
     if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
     const bytes=(!live||assets.publishedDraft)&&assets.testingDraft?new TextEncoder().encode(live?(assets.liveDraft||assets.testingDraft):assets.testingDraft):await decryptBook(assets.testing,previewKey);
-    let content=new TextDecoder().decode(bytes).replace('<script>','<script>window.OPORTALS_OWNER='+JSON.stringify(isOwner)+';window.OPORTALS_LIVE='+JSON.stringify(live)+';window.OPORTALS_FREE_DOWNLOADS='+JSON.stringify(assets.testing?.temporaryDownloads===true)+';');if(isOwner)content=content.replaceAll('data-owner-only hidden','data-owner-only');if(live){content=content.replaceAll('href="/Testing/checkout/life-secrets"','href="/checkout"').replaceAll('/Testing#','/#').replaceAll('\\/Testing','').replaceAll('/Testing','').replace('<meta name="robots" content="noindex,nofollow">','<meta name="robots" content="index,follow">');content=content.replace('</head>','<script src="/analytics.js" defer></script><link rel="canonical" href="'+url.origin+url.pathname+'"></head>');}const documentHeaders={...privateHeaders,'Content-Type':'text/html; charset=utf-8'};if(live)delete documentHeaders['X-Robots-Tag'];if(isOwner)content=content.replace('</footer>','<a href="/Visits">Visits &amp; clicks</a></footer>');return new Response(withVisitsTracking(content,assets.visitsTracking),{headers:documentHeaders});
+    let content=new TextDecoder().decode(bytes).replace('<script>','<script>window.OPORTALS_OWNER='+JSON.stringify(isOwner)+';window.OPORTALS_LIVE='+JSON.stringify(live)+';window.OPORTALS_FREE_DOWNLOADS='+JSON.stringify(assets.testing?.temporaryDownloads===true)+';');if(isOwner)content=content.replaceAll('data-owner-only hidden','data-owner-only');if(live){content=content.replaceAll('href="/Testing/checkout/life-secrets"','href="/checkout"').replaceAll('/Testing#','/#').replaceAll('\\/Testing','').replaceAll('/Testing','').replace('<meta name="robots" content="noindex,nofollow">','<meta name="robots" content="index,follow">');content=content.replace('</head>','<script src="/analytics.js" defer></script><link rel="canonical" href="'+url.origin+url.pathname+'"></head>');}const documentHeaders={...privateHeaders,'Content-Type':'text/html; charset=utf-8'};if(live)delete documentHeaders['X-Robots-Tag'];if(isOwner)content=content.replace('</footer>','<a href="/Visits">Visits &amp; clicks</a>'+(await adminSession(request,env)?adminSignOutControl():'')+'</footer>');return new Response(withVisitsTracking(content,assets.visitsTracking),{headers:documentHeaders});
    }
    if(path==='/analytics.js' && request.method==='GET')return new Response(assets.analytics,{headers:{...headers,'Content-Type':'text/javascript; charset=utf-8'}});
    if(path==='/privacy' && request.method==='GET')return htmlResponse(page('Privacy', '<h1>Privacy &amp; analytics.</h1><p>OPortals.com uses essential payment and download functions to provide the book. PayPal processes payments. Our contact form opens your email app; it does not send your question to Google Analytics.</p><h2>Optional analytics</h2><p>Google Analytics 4 measures visits and clicks and uses analytics cookies by default, unless you reject tracking in Privacy settings. It can collect identifiers, device/browser information and approximate location. Google processes this data on our behalf; processing may occur outside your country. We do not send your contact message, email address, PayPal transaction ID or download token in the analytics events we implement. Analytics is not loaded on payment-return or download pages.</p><p>We keep your analytics choice on this device for up to 180 days. Google Analytics cookies can last up to two years; their lifetimes can be renewed by visits. Advertising storage, Google signals and advertising personalization are disabled in our tag configuration. Your Analytics property settings may also affect data retention.</p><h2>Your choice</h2><p>Analytics is enabled by default. You can reject tracking entirely or keep analytics enabled. To change your choice or withdraw consent, use Privacy settings in the homepage footer. Rejecting clears analytics cookies this site can access and reloads the page if needed. This does not delete analytics data already received by Google.</p><p><a class="secondary" href="https://policies.google.com/privacy" rel="noopener noreferrer">Google privacy information</a></p><p>For privacy questions or requests, use our <a class="secondary" href="/#contact">contact form</a>.</p>'));
@@ -183,7 +185,7 @@ export function createHandler(assets, fetcher = fetch) {
    if(path==='/paypal/return')return htmlResponse(assets.socialMirrorPublished?receiptPage.replaceAll('/Testing/SocialMirror','/SocialMirror'):receiptPage);
    if(path==='/Life-Secrets-Sample.pdf')return new Response(request.method==='HEAD'?null:fromBase64(assets.sample),{headers:{...headers,'Content-Type':'application/pdf','Content-Disposition':'inline; filename="Life-Secrets-Sample.pdf"'}});
    if(path==='/favicon.svg' || path==='/oportals-mark.svg')return new Response(assets.logo,{headers:{...headers,'Content-Type':'image/svg+xml'}});
-   if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /Testing\nDisallow: /testing\nDisallow: /Visits\nDisallow: /visits\nDisallow: /Sessions\nDisallow: /sessions\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
+   if(path==='/robots.txt')return new Response('User-agent: *\nDisallow: /admin/\nDisallow: /Testing\nDisallow: /testing\nDisallow: /Visits\nDisallow: /visits\nDisallow: /Sessions\nDisallow: /sessions\nDisallow: /download\nDisallow: /paypal/\nDisallow: /api/\n',{headers:{...headers,'Content-Type':'text/plain'}});
    if(path==='/')return htmlResponse(assets.home);
    return htmlResponse(page('Page not found','<h1>Page not found.</h1><p>Follow the link below to return to the book.</p>'),404);
   } catch(e) {

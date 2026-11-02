@@ -1,3 +1,4 @@
+import {adminSession} from './admin-auth.mjs';
 // First-party measurements: aggregates and optional short-lived anonymous sessions.
 const visitBooks=['life-secrets','art-of-attention','lead-without-the-noise','man-and-people','sneakpeak-ideas','the-philosopher-manager','time-for-what-matters','stand-out-for-something'];
 const visitPages=new Set(['/','/ideas','/SocialMirror',...visitBooks.map(s=>'/book/'+s),...['about','contact','privacy','terms','refunds'].map(s=>'/info/'+s)]);
@@ -7,7 +8,7 @@ const visitTargets=new Set(['home','ideas','social_mirror','explore_books','our_
  ...visitBooks.flatMap(s=>['book:'+s,'buy:'+s,'preview:'+s]),...['all','original','inspired'].map(s=>'filter:'+s),...['about','contact','privacy','terms','refunds'].map(s=>'info:'+s)]);
 const visitHeaders={'Cache-Control':'private, no-store','Content-Type':'application/json; charset=utf-8','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff','Vary':'Cookie'};
 function visitsJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:visitHeaders});}
-export function visitsOwner(request,env){const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');return !!id&&!!email&&!!env.PREVIEW_OWNER_EMAIL&&email.trim().toLowerCase()===env.PREVIEW_OWNER_EMAIL.trim().toLowerCase();}
+export async function visitsOwner(request,env){const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');return (!!id&&!!email&&!!env.PREVIEW_OWNER_EMAIL&&email.trim().toLowerCase()===env.PREVIEW_OWNER_EMAIL.trim().toLowerCase())||await adminSession(request,env);}
 export function visitsDay(now=new Date()){
  const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Amman',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now).map(v=>[v.type,v.value]));return p.year+'-'+p.month+'-'+p.day;
 }
@@ -27,7 +28,7 @@ export async function recordSiteVisit(request,env){
   if(d.eventId!==undefined&&(typeof d.eventId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(d.eventId)))return visitsJson({error:'Invalid event identifier.'},400);
   if(d.session===undefined&&(d.sequence!==undefined||d.timezone!==undefined||d.eventId!==undefined))return visitsJson({error:'Invalid session.'},400);
   if(d.timezone!==undefined){if(typeof d.timezone!=='string'||d.timezone.length>64)return visitsJson({error:'Invalid time zone.'},400);try{new Intl.DateTimeFormat('en',{timeZone:d.timezone});}catch{return visitsJson({error:'Invalid time zone.'},400);}}
-  if(visitsOwner(request,env))return new Response(null,{status:204,headers:visitHeaders});
+  if(await visitsOwner(request,env))return new Response(null,{status:204,headers:visitHeaders});
   if(!env.DB)return visitsJson({error:'Measurement unavailable.'},503);
   const now=new Date(),site=new URL(request.url).pathname.startsWith('/Testing/')?'testing':'live',geoCountry=request.cf?.country||request.headers.get('cf-ipcountry')||'',country=/^[A-Z]{2}$/.test(geoCountry)?geoCountry:'ZZ';
   if(d.session){
