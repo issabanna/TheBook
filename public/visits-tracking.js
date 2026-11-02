@@ -2,7 +2,7 @@
  'use strict';
  if(window.__oportalsVisitsLoaded)return;
  window.__oportalsVisitsLoaded=true;
- const slugs=['life-secrets','art-of-attention','lead-without-the-noise','man-and-people','sneakpeak-ideas','the-philosopher-manager','time-for-what-matters','stand-out-for-something'];
+ const slugs=['life-secrets','art-of-attention','lead-without-the-noise','man-and-people','sneakpeak-ideas','the-philosopher-manager','time-for-what-matters','stand-out-for-something',"the-space-before-yes","think-again-gently","the-quiet-art-of-enough","when-life-changes","meditations-reimagined","epictetus-a-freer-mind","epicurus-the-art-of-enough","plato-the-examined-life","aristotle-a-life-of-character","seneca-on-the-shortness-of-life"];
  const ids={
   'sample-start':'mirror_start','instructions-continue':'mirror_continue','results-button':'mirror_results',
   'share-result':'mirror_share_card','download-card':'mirror_save_card','paid-analysis':'mirror_paid_offer',

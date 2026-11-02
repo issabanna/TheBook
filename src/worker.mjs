@@ -1,3 +1,4 @@
+import {testingOnlyBooks,testingOnlyBookSlugs} from './testing-catalogue.mjs';
 import {adminAuthRoute,adminLoginPage,adminSession,adminSignOutControl} from './admin-auth.mjs';
 import {siteSessionsReport,siteSessionTimeline} from './sessions.mjs';
 import {visitsOwner,withVisitsTracking,recordSiteVisit,siteVisitsReport} from './visits.mjs';
@@ -30,7 +31,7 @@ async function limitedBody(request, limit = 16384) {
   while (true) { const {done,value}=await reader.read();if(done)break;total+=value.length;if(total>limit){await reader.cancel();throw new PaymentError('Request too large.',413);}chunks.push(value); }
   const bytes=new Uint8Array(total);let offset=0;for(const part of chunks){bytes.set(part,offset);offset+=part.length;}return new TextDecoder().decode(bytes);
 }
-const downloadCatalogue=[{"id": "the-philosopher-manager", "title": "The Philosopher Manager"},{"id": "lead-without-the-noise", "title": "Lead Without the Noise"},{"id": "time-for-what-matters", "title": "Time for What Matters"},{"id": "stand-out-for-something", "title": "Stand Out for Something"},{id:'sneakpeak-ideas',title:'SneakPeak Ideas — free collection'},{id:'life-secrets',title:'Life Secrets'},{id:'art-of-attention',title:'The Art of Attention'},{id:'man-and-people-guide',title:'Man and People — illustrated companion'}];
+const downloadCatalogue=[{"id": "the-philosopher-manager", "title": "The Philosopher Manager"},{"id": "lead-without-the-noise", "title": "Lead Without the Noise"},{"id": "time-for-what-matters", "title": "Time for What Matters"},{"id": "stand-out-for-something", "title": "Stand Out for Something"},{id:'sneakpeak-ideas',title:'SneakPeak Ideas — free collection'},{id:'life-secrets',title:'Life Secrets'},{id:'art-of-attention',title:'The Art of Attention'},{id:'man-and-people-guide',title:'Man and People — illustrated companion'},...testingOnlyBooks.map(b=>({id:b.slug,title:b.title}))];
 const trackedFiles=Object.fromEntries(downloadCatalogue.flatMap(b=>[[b.id+'.pdf',{bookId:b.id,kind:'full'}],[b.id+'-sample.pdf',{bookId:b.id,kind:'sample'}]]));
 async function captureDownload(env,name){
  const item=trackedFiles[name];if(!item)return;
@@ -75,6 +76,7 @@ export function createHandler(assets, fetcher = fetch) {
    if(live&&/^\/Testing\/checkout\/(?:life-secrets|art-of-attention|lead-without-the-noise|man-and-people)$/.test(path))return new Response(null,{status:303,headers:{...headers,Location:'/checkout?book='+path.split('/').pop()}});
    if(path==='/Testing' || path.startsWith('/Testing/')) {
     const privateHeaders={...headers,'Content-Security-Policy':headers['Content-Security-Policy'].replace("object-src 'none'","object-src 'self'")+"; frame-src 'self'; font-src 'self' data:",'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow, noarchive',Vary:'Cookie'};
+    if(live&&(testingOnlyBookSlugs.some(slug=>path==='/Testing/book/'+slug||path==='/Testing/checkout/'+slug||path==='/Testing/books/'+slug+'.pdf'||path==='/Testing/books/'+slug+'-sample.pdf')||path.startsWith('/Testing/media/testing-collection-')))return new Response('Not found.',{status:404,headers:privateHeaders});
     const privatePage=(body,status)=>new Response(body,{status,headers:{...privateHeaders,...(body.includes('action="/admin/login"')?{'Referrer-Policy':'same-origin'}:{}),'Content-Type':'text/html; charset=utf-8'}});
     if(request.method!=='GET' && request.method!=='HEAD' && !(['/Testing/api/events','/Testing/api/contact','/Testing/api/contact/deliver','/Testing/api/contact/delete','/Testing/api/free-book','/Testing/leads'].includes(path)&&request.method==='POST'))return new Response('Method not allowed.',{status:405,headers:privateHeaders});
     const previewKey=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(assets.testing?.keyEnv)?env[assets.testing.keyEnv]:env.PREVIEW_ENCRYPTION_KEY;
@@ -84,6 +86,7 @@ export function createHandler(assets, fetcher = fetch) {
     const isOwner=await visitsOwner(request,env);
     const gatedFreeBook=(!live||assets.publishedDraft)&&!!assets.testingDraft&&path==='/Testing/books/sneakpeak-ideas.pdf';const freeGrant=gatedFreeBook?await freeBookGrant(request,env):null;if(gatedFreeBook&&!freeGrant&&!isOwner)return new Response(null,{status:303,headers:{...privateHeaders,Location:(live?'':'/Testing')+'/book/sneakpeak-ideas?get=1'}});
     const publicFiles=new Set(["the-philosopher-manager-sample.pdf","lead-without-the-noise-sample.pdf","time-for-what-matters-sample.pdf","stand-out-for-something-sample.pdf",'sneakpeak-ideas.pdf','life-secrets-sample.pdf','art-of-attention-sample.pdf','man-and-people-guide-sample.pdf']);
+    if(!live)for(const slug of testingOnlyBookSlugs)publicFiles.add(slug+'-sample.pdf');
     if(assets.testing?.temporaryDownloads===true)for(const name of ['life-secrets.pdf','art-of-attention.pdf','man-and-people-guide.pdf','the-philosopher-manager.pdf','lead-without-the-noise.pdf','time-for-what-matters.pdf','stand-out-for-something.pdf'])publicFiles.add(name);
     const ownerOnly=assets.testing?.publicPreview!==true||['/Testing/leads','/Testing/leads.csv','/Testing/metrics','/Testing/downloads','/Testing/downloads.json','/Testing/contact-inbox','/Testing/api/contact/deliver','/Testing/api/contact/delete'].includes(path)||(path.startsWith('/Testing/books/')&&!publicFiles.has(path.slice('/Testing/books/'.length)));
     if(ownerOnly&&!isOwner){
@@ -127,7 +130,7 @@ export function createHandler(assets, fetcher = fetch) {
      const editionFile=!live&&Object.hasOwn(assets.testingEditionBooks||{},name)?assets.testingEditionBooks[name]:null;
      const file=editionFile||(isExisting?assets.book:Object.hasOwn(assets.completedBooks||{},name)?assets.completedBooks[name]:null);
      if(!file)return new Response('Book not found.',{status:404,headers:privateHeaders});
-     const bookKey=isExisting&&!editionFile?env.BOOK_ENCRYPTION_KEY:['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY','PREMIUM_EDITION_KEY','PREMIUM_POSTCARD_KEY','PREMIUM_GRAPH_KEY','PREMIUM_EIGHTY_KEY','PREMIUM_POSTER_KEY','PREMIUM_COLLECTION_KEY'].includes(file.keyEnv)?env[file.keyEnv]:env.PREVIEW_CONTENT_KEY;
+     const bookKey=isExisting&&!editionFile?env.BOOK_ENCRYPTION_KEY:['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY','PREMIUM_EDITION_KEY','PREMIUM_POSTCARD_KEY','PREMIUM_GRAPH_KEY','PREMIUM_EIGHTY_KEY','PREMIUM_POSTER_KEY','PREMIUM_COLLECTION_KEY','TESTING_CATALOGUE_KEY'].includes(file.keyEnv)?env[file.keyEnv]:env.PREVIEW_CONTENT_KEY;
      if(!bookKey)return privatePage(page('Book unavailable','<h1>This preview book is not available yet.</h1>'),503);
      const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':privateHeaders['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
      if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});

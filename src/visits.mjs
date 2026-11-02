@@ -1,6 +1,7 @@
+import {testingOnlyBookSlugs} from './testing-catalogue.mjs';
 import {adminSession} from './admin-auth.mjs';
 // First-party measurements: aggregates and optional short-lived anonymous sessions.
-const visitBooks=['life-secrets','art-of-attention','lead-without-the-noise','man-and-people','sneakpeak-ideas','the-philosopher-manager','time-for-what-matters','stand-out-for-something'];
+const visitBooks=['life-secrets','art-of-attention','lead-without-the-noise','man-and-people','sneakpeak-ideas','the-philosopher-manager','time-for-what-matters','stand-out-for-something',...testingOnlyBookSlugs];
 const visitPages=new Set(['/','/ideas','/SocialMirror',...visitBooks.map(s=>'/book/'+s),...['about','contact','privacy','terms','refunds'].map(s=>'/info/'+s)]);
 const visitSources=new Set(['direct','internal','instagram','facebook','google','search','email','whatsapp','campaign','other']);
 const visitTargets=new Set(['home','ideas','social_mirror','explore_books','our_approach','external_link','paypal_checkout','week_selection','button_click','preview_close','preview_page','mirror_paid_close','mirror_pause_examples',
