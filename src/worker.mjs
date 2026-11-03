@@ -1,7 +1,7 @@
 import {usesSharedBookCheckout,sharedBookCheckoutEnabled,isNewSharedBookPayment,createBookOrder,bookPaymentAllocation,resolveBookPayment,sharedBookCheckoutPage,sharedBookRedirectPage} from './book-checkout.mjs';
 import {testingOnlyBooks,testingOnlyBookSlugs} from './testing-catalogue.mjs';
 import {adminAuthRoute,adminLoginPage,adminSession,adminSignOutControl} from './admin-auth.mjs';
-import {siteSessionsReport,siteSessionTimeline} from './sessions.mjs';
+import {siteSessionsReport,siteSessionTimeline,setSessionStatsExclusion} from './sessions.mjs';
 import {visitsOwner,withVisitsTracking,recordSiteVisit,siteVisitsReport} from './visits.mjs';
 import {socialMirrorApi} from './social-mirror.mjs';
 import {registerFreeBook,freeBookGrant,noteFreeBookDownload,freeBookLeadReport} from './free-book-leads.mjs';
@@ -58,13 +58,14 @@ export function createHandler(assets, fetcher = fetch) {
    const reportRoute=path.match(/^\/(?:Testing\/)?(Visits|Sessions)(\/.*)?$/);
    if(reportRoute){
     const dashboardHeaders={...headers,'Referrer-Policy':'same-origin','Cache-Control':'private, no-store','Vary':'Cookie','X-Robots-Tag':'noindex, nofollow, noarchive'};
-    const isSessions=reportRoute[1]==='Sessions',tail=(reportRoute[2]||'').replace(/\/$/,''),dataRoute=tail==='/data',timelineRoute=isSessions&&tail.startsWith('/session/'),apiRoute=dataRoute||timelineRoute,hasIdentity=!!request.headers.get('oai-authenticated-user-id')&&!!request.headers.get('oai-authenticated-user-email');
+    const isSessions=reportRoute[1]==='Sessions',tail=(reportRoute[2]||'').replace(/\/$/,''),dataRoute=tail==='/data',statsRoute=isSessions&&tail.match(/^\/session\/([^/]+)\/stats$/),timelineRoute=isSessions&&tail.startsWith('/session/'),apiRoute=dataRoute||timelineRoute,hasIdentity=!!request.headers.get('oai-authenticated-user-id')&&!!request.headers.get('oai-authenticated-user-email');
     if(!await visitsOwner(request,env)){
      const status=hasIdentity?403:401;
      if(apiRoute)return new Response(JSON.stringify({error:hasIdentity?'This dashboard is restricted to the owner.':'Sign in with your owner account to open this dashboard.'}),{status,headers:{...dashboardHeaders,'Content-Type':'application/json'}});
      const body=adminLoginPage(url.pathname+url.search);
      return new Response(request.method==='HEAD'?null:body,{status,headers:{...dashboardHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }
+    if(statsRoute){const report=await setSessionStatsExclusion(request,env,statsRoute[1]);return new Response(report.body,{status:report.status,headers:{...dashboardHeaders,...Object.fromEntries(report.headers)}});}
     if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed.',{status:405,headers:dashboardHeaders});
     if(request.method==='HEAD')return new Response(null,{headers:dashboardHeaders});
     if(apiRoute){const report=timelineRoute?await siteSessionTimeline(request,env,tail.slice(9)):isSessions?await siteSessionsReport(request,env):await siteVisitsReport(request,env);return new Response(report.body,{status:report.status,headers:{...dashboardHeaders,...Object.fromEntries(report.headers)}});}
@@ -135,7 +136,7 @@ export function createHandler(assets, fetcher = fetch) {
      const editionFile=!live&&Object.hasOwn(assets.testingEditionBooks||{},name)?assets.testingEditionBooks[name]:null;
      const file=editionFile||(isExisting?assets.book:Object.hasOwn(assets.completedBooks||{},name)?assets.completedBooks[name]:null);
      if(!file)return new Response('Book not found.',{status:404,headers:privateHeaders});
-     const bookKey=isExisting&&!editionFile?env.BOOK_ENCRYPTION_KEY:['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY','PREMIUM_EDITION_KEY','PREMIUM_POSTCARD_KEY','PREMIUM_GRAPH_KEY','PREMIUM_EIGHTY_KEY','PREMIUM_POSTER_KEY','PREMIUM_COLLECTION_KEY','TESTING_CATALOGUE_KEY','BOOK_SAMPLE_KEY','BLUE_GREY_EDITION_KEY'].includes(file.keyEnv)?env[file.keyEnv]:env.PREVIEW_CONTENT_KEY;
+     const bookKey=isExisting&&!editionFile?env.BOOK_ENCRYPTION_KEY:['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY','PREMIUM_EDITION_KEY','PREMIUM_POSTCARD_KEY','PREMIUM_GRAPH_KEY','PREMIUM_EIGHTY_KEY','PREMIUM_POSTER_KEY','PREMIUM_COLLECTION_KEY','TESTING_CATALOGUE_KEY','BOOK_SAMPLE_KEY','BLUE_GREY_EDITION_KEY','WHITE_PAPER_EDITION_KEY'].includes(file.keyEnv)?env[file.keyEnv]:env.PREVIEW_CONTENT_KEY;
      if(!bookKey)return privatePage(page('Book unavailable','<h1>This preview book is not available yet.</h1>'),503);
      const pdfHeaders={...privateHeaders,'Content-Type':'application/pdf','Content-Disposition':`${url.searchParams.get('download')==='1'?'attachment':'inline'}; filename="${name}"`,'X-Frame-Options':'SAMEORIGIN','Content-Security-Policy':privateHeaders['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")};
      if(request.method==='HEAD')return new Response(null,{headers:pdfHeaders});

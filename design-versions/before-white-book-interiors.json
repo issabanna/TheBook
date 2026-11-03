@@ -1,0 +1,10 @@
+{
+  "savedAt": "2026-11-03",
+  "versionNumber": 170,
+  "versionId": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_bfe7b45ab828819194c090e5ffe84e5e",
+  "commitSha": "6e36e734800df8cf70ea74216bfb677d08a8ecf8",
+  "gitTag": "before-white-book-interiors-2026-11-03",
+  "sessionFeatureBaselineTag": "before-session-stats-exclusions-2026-11-03",
+  "privatePdfBaseline": "private/checkpoints/before-white-interiors/manifest.json",
+  "rollback": "Restore PDF manifests and preview media from this tag for book-design rollback. Preserve runtime secrets, payment allocations, migration 0010 and exclusion-aware session queries once any session has been excluded."
+}

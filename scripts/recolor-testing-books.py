@@ -87,10 +87,9 @@ def regenerate(spec):
  stem,title,sub,dark,accent,paper,kind=spec;r=PdfReader(SRC/(stem+'.pdf'));writer=PdfWriter();writer.clone_document_from_reader(r)
  cp=cover(spec);writer.pages[0].replace_contents(cp.get_contents());writer.pages[0][NameObject('/Resources')]=cp['/Resources'].clone(writer)
  for n,p in enumerate(writer.pages[1:],1):
-  # Colored paper throughout; a stronger opening tint at regular chapter intervals.
-  tint=paper if n%4 else ('#dedac5' if kind in ['time','pages','balance'] else '#d6dfe2')
-  repaint(p,tint)
-  buf=BytesIO();c=canvas.Canvas(buf,pagesize=(W,H));rect(c,0,0,9,H,dark);rect(c,9,0,3,H,accent);rect(c,0,586,W,9,dark);c.save();buf.seek(0);p.merge_page(PdfReader(buf).pages[0])
+  # White interior paper across every title; coloured panels and cover artwork
+  # remain separate from the page background. No coloured page-edge rails.
+  repaint(p,'#ffffff')
  writer.add_metadata({'/Title':title.replace('\n',' '),'/Author':'OPortals','/Subject':sub.replace('\n',' '),'/Creator':'OPortals publishing studio'});writer.write(B/(stem+'.pdf'))
  # Samples are extracted from regenerated books, ensuring cover and page fidelity.
  if stem!='sneakpeak-ideas':

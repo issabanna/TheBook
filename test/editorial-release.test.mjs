@@ -16,8 +16,8 @@ test('published book images stay frozen when a Testing image changes',async()=>{
 test('approved editions stay separate from later drafts and verified purchases deliver the approved book',async()=>{
  const secret=randomBytes(32).toString('base64');
  const key=await crypto.subtle.importKey('raw',Buffer.from(secret,'base64'),'AES-GCM',false,['encrypt']);
- const seal=async text=>{const iv=crypto.getRandomValues(new Uint8Array(12));return {keyEnv:'PREMIUM_EIGHTY_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(text))).toString('base64')};};
- const env={PREVIEW_V5_KEY:'configured',PREMIUM_EIGHTY_KEY:secret,PAYPAL_PDT_TOKEN:'mock-verifier',PAYPAL_RECEIVER_EMAIL:'seller@example.com',BOOK_ENCRYPTION_KEY:secret,DOWNLOAD_SIGNING_KEY:randomBytes(32).toString('base64')};
+ const seal=async text=>{const iv=crypto.getRandomValues(new Uint8Array(12));return {keyEnv:'WHITE_PAPER_EDITION_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(text))).toString('base64')};};
+ const env={PREVIEW_V5_KEY:'configured',WHITE_PAPER_EDITION_KEY:secret,PAYPAL_PDT_TOKEN:'mock-verifier',PAYPAL_RECEIVER_EMAIL:'seller@example.com',BOOK_ENCRYPTION_KEY:secret,DOWNLOAD_SIGNING_KEY:randomBytes(32).toString('base64')};
  const approved={},draft={},products=Object.entries(BOOK_PRODUCTS).filter(([,b])=>!b.service);
  for(const [id,b] of products){approved[b.file]=await seal('approved:'+id);draft[b.file]=await seal('next draft:'+id);approved[b.file.replace('.pdf','-sample.pdf')]=await seal('approved sample:'+id);draft[b.file.replace('.pdf','-sample.pdf')]=await seal('next sample:'+id);}
  const assets={publishedDraft:true,testing:{liveStorefront:true,publicPreview:true,temporaryDownloads:false,keyEnv:'PREVIEW_V5_KEY'},completedBooks:approved,testingEditionBooks:draft};

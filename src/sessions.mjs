@@ -1,34 +1,61 @@
-import {visitsRange} from './visits.mjs';
+import {visitsRange,visitsOwner} from './visits.mjs';
 const sessionHeaders={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie','X-Robots-Tag':'noindex, nofollow, noarchive'};
 const sessionJson=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:sessionHeaders});
 const sessionDuration="MAX(0,CAST(ROUND((julianday(last_seen_at)-julianday(started_at))*86400) AS INTEGER))";
-const sessionColumns='session_id AS id,site,started_day,started_at,last_seen_at,country,city,timezone,source,first_page,last_page,page_views,distinct_pages,clicks,'+sessionDuration+' AS duration_seconds';
+const sessionColumns='session_id AS id,site,started_day,started_at,last_seen_at,country,city,timezone,source,first_page,last_page,page_views,distinct_pages,clicks,stats_excluded,'+sessionDuration+' AS duration_seconds';
 export async function siteSessionsReport(request,env){
  let range;try{range=visitsRange(new URL(request.url));}catch(e){return sessionJson({error:e.message},400);}
  const url=new URL(request.url),raw=url.searchParams.get('page')||'0';if(!/^\d{1,4}$/.test(raw)||Number(raw)>2000)return sessionJson({error:'Invalid page.'},400);
+ const stats=url.searchParams.get('stats')||'included';if(!['included','excluded','all'].includes(stats))return sessionJson({error:'Invalid statistics filter.'},400);
  const sortKey=url.searchParams.get('sort')||'started',direction=url.searchParams.get('direction')||(['session','location'].includes(sortKey)?'asc':'desc');
  const sortColumns={session:'session_id',location:'location',started:'started_at',last:'last_seen_at',duration:'duration_seconds',pages:'page_views',clicks:'clicks'};
  if(!Object.hasOwn(sortColumns,sortKey)||!['asc','desc'].includes(direction))return sessionJson({error:'Invalid sort order.'},400);
  if(!env.DB)return sessionJson({error:'Sessions are temporarily unavailable.'},503);
  const {from,to,site}=range,where='started_day BETWEEN ? AND ?'+(site==='all'?'':' AND site=?'),args=site==='all'?[from,to]:[from,to,site],page=Number(raw),limit=50;
+ const listWhere=where+(stats==='all'?'':' AND stats_excluded='+(stats==='excluded'?'1':'0'));
  try{
   let order=sortColumns[sortKey];
   if(sortKey==='location'){
    // Sort by the visible English country/city label, rather than ISO code.
    // Only validated two-letter codes and escaped names from Intl enter SQL.
-   const countries=await env.DB.prepare('SELECT DISTINCT country FROM site_sessions WHERE '+where).bind(...args).all(),names=new Intl.DisplayNames(['en'],{type:'region'});
+   const countries=await env.DB.prepare('SELECT DISTINCT country FROM site_sessions WHERE '+listWhere).bind(...args).all(),names=new Intl.DisplayNames(['en'],{type:'region'});
    const literal=s=>"'"+s.replaceAll("'","''")+"'";
    const cases=countries.results.filter(r=>/^[A-Z]{2}$/.test(r.country)).map(r=>'WHEN '+literal(r.country)+' THEN '+literal(r.country==='ZZ'?'Location unavailable':names.of(r.country)||r.country)).join(' ');
    const countryName=cases?'(CASE country '+cases+' ELSE country END)':"'Location unavailable'";
    order="(CASE WHEN city<>'' THEN city || CASE WHEN country<>'ZZ' AND country<>'' THEN ', ' || "+countryName+" ELSE '' END ELSE "+countryName+' END) COLLATE NOCASE';
   }
-  const [summary,list,first]=await env.DB.batch([
-   env.DB.prepare('SELECT COUNT(*) AS sessions,COALESCE(SUM(page_views),0) AS pageViews,COALESCE(SUM(clicks),0) AS clicks,COALESCE(ROUND(AVG('+sessionDuration+')),0) AS averageSeconds FROM site_sessions WHERE '+where).bind(...args),
-   env.DB.prepare('SELECT '+sessionColumns+' FROM site_sessions WHERE '+where+' ORDER BY '+order+' '+direction.toUpperCase()+',started_at DESC,session_id ASC,site ASC LIMIT ? OFFSET ?').bind(...args,limit,page*limit),
-   env.DB.prepare('SELECT MIN(started_day) AS first_day FROM site_sessions')
+  const [summary,list,first,count,excluded]=await env.DB.batch([
+   env.DB.prepare('SELECT COUNT(*) AS sessions,COALESCE(SUM(page_views),0) AS pageViews,COALESCE(SUM(clicks),0) AS clicks,COALESCE(ROUND(AVG('+sessionDuration+')),0) AS averageSeconds FROM site_sessions WHERE '+where+' AND stats_excluded=0').bind(...args),
+   env.DB.prepare('SELECT '+sessionColumns+' FROM site_sessions WHERE '+listWhere+' ORDER BY '+order+' '+direction.toUpperCase()+',started_at DESC,session_id ASC,site ASC LIMIT ? OFFSET ?').bind(...args,limit,page*limit),
+   env.DB.prepare('SELECT MIN(started_day) AS first_day FROM site_sessions'),
+   env.DB.prepare('SELECT COUNT(*) AS total FROM site_sessions WHERE '+listWhere).bind(...args),
+   env.DB.prepare('SELECT COUNT(*) AS total FROM site_sessions WHERE '+where+' AND stats_excluded=1').bind(...args)
   ]);
-  const totals=summary.results[0];return sessionJson({range,sort:{key:sortKey,direction},summary:totals,sessions:list.results,page,limit,hasMore:(page+1)*limit<Number(totals.sessions),firstDay:first.results[0]?.first_day||null,generatedAt:new Date().toISOString()});
+  const totals=summary.results[0],total=Number(count.results[0].total);return sessionJson({range,stats,sort:{key:sortKey,direction},summary:totals,total,excludedSessions:Number(excluded.results[0].total),sessions:list.results,page,limit,hasMore:(page+1)*limit<total,firstDay:first.results[0]?.first_day||null,generatedAt:new Date().toISOString()});
  }catch{return sessionJson({error:'Sessions are temporarily unavailable. Please try again shortly.'},503);}
+}
+export async function setSessionStatsExclusion(request,env,id){
+ if(!await visitsOwner(request,env))return sessionJson({error:'Owner access required.'},401);
+ if(request.method!=='POST')return sessionJson({error:'Method not allowed.'},405);
+ if(request.headers.get('origin')!==new URL(request.url).origin)return sessionJson({error:'Origin not allowed.'},403);
+ if(!request.headers.get('content-type')?.startsWith('application/json'))return sessionJson({error:'Use JSON.'},415);
+ const site=new URL(request.url).searchParams.get('site')||(new URL(request.url).pathname.startsWith('/Testing/')?'testing':'live');
+ if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id)||!['live','testing'].includes(site))return sessionJson({error:'Invalid session.'},400);
+ let data;
+ try{
+  const reader=request.body?.getReader();if(!reader)return sessionJson({error:'Invalid request.'},400);
+  let size=0;const chunks=[];while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>256){await reader.cancel();return sessionJson({error:'Request is too large.'},413);}chunks.push(value);}
+  const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}data=JSON.parse(new TextDecoder().decode(bytes));
+ }catch{return sessionJson({error:'Invalid request.'},400);}
+ if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).length!==1||typeof data.excluded!=='boolean')return sessionJson({error:'Choose whether to exclude this session.'},400);
+ if(!env.DB)return sessionJson({error:'Sessions are temporarily unavailable.'},503);
+ try{
+  // One atomic, idempotent state change. Database triggers reconcile aggregates
+  // from the retained event history and ignore new excluded events.
+  const result=await env.DB.prepare('UPDATE site_sessions SET stats_excluded=? WHERE site=? AND session_id=? RETURNING '+sessionColumns).bind(data.excluded?1:0,site,id.toLowerCase()).all();
+  if(!result.results.length)return sessionJson({error:'This session was not found.'},404);
+  return sessionJson({session:result.results[0]});
+ }catch{return sessionJson({error:'Could not update this session. Please try again.'},503);}
 }
 export async function siteSessionTimeline(request,env,id){
  const site=new URL(request.url).searchParams.get('site')||(new URL(request.url).pathname.startsWith('/Testing/')?'testing':'live');

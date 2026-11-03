@@ -7,7 +7,7 @@ import {adminAuthRoute,adminSession,adminReturnPath} from '../src/admin-auth.mjs
 import {createHandler} from '../src/worker.mjs';
 const origin='https://oportals.com',password='local-fixture-only',salt=randomBytes(16).toString('hex');
 function fixture(){
- const sql=new DatabaseSync(':memory:');for(const file of ['0001_testing_events.sql','0002_contact_messages.sql','0007_site_visits.sql','0008_site_sessions.sql'])sql.exec(readFileSync('drizzle/'+file,'utf8'));
+ const sql=new DatabaseSync(':memory:');for(const file of ['0001_testing_events.sql','0002_contact_messages.sql','0007_site_visits.sql','0008_site_sessions.sql','0010_session_stats_exclusions.sql'])sql.exec(readFileSync('drizzle/'+file,'utf8'));
  const DB={sql,prepare(q){let args=[];return {bind(...v){args=v;return this;},async all(){return {results:sql.prepare(q).all(...args)};},async run(){return sql.prepare(q).run(...args);}};},async batch(q){return Promise.all(q.map(s=>s.all()));}};
  return {DB,ADMIN_PASSWORD_HASH:salt+'.'+pbkdf2Sync(password,Buffer.from(salt,'hex'),100000,32,'sha256').toString('hex'),ADMIN_SESSION_KEY:randomBytes(32).toString('hex'),PREVIEW_OWNER_EMAIL:'owner@example.com',PREVIEW_V5_KEY:'fixture'};
 }
@@ -71,4 +71,12 @@ test('all embedded admin forms preserve browser POST origin and still reject nul
  const browserOrigin=loginPage.headers.get('referrer-policy')==='no-referrer'?'null':origin;
  const login=await adminAuthRoute(post({}, {origin:browserOrigin}),env);assert.equal(login.status,303);
  assert.equal(env.DB.sql.prepare('SELECT SUM(request_count) AS n FROM contact_limits').get().n,1);
+});
+
+test('password-only admin can exclude and restore a session without ChatGPT identity headers',async()=>{
+ const env=fixture(),h=createHandler({}),id='12345678-1234-4234-8234-123456789abc',day=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Amman'}).format(new Date()),at=new Date().toISOString();
+ env.DB.sql.prepare('INSERT INTO site_sessions(site,session_id,started_day,started_at,last_seen_at,source,first_page,last_page) VALUES(?,?,?,?,?,?,?,?)').run('live',id,day,at,at,'direct','/','/');
+ env.DB.sql.prepare('INSERT INTO site_session_events(site,session_id,event_id,sequence,day,occurred_at,event_name,page,target,source,country) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run('live',id,id,1,day,at,'page_view','/','','direct','ZZ');
+ const login=await h(post({next:'/Sessions'}),env),cookie=cookieOf(login);
+ for(const excluded of [true,false]){const r=await h(new Request(origin+'/Sessions/session/'+id+'/stats',{method:'POST',headers:{cookie,origin,'Content-Type':'application/json'},body:JSON.stringify({excluded})}),env);assert.equal(r.status,200);assert.equal((await r.json()).session.stats_excluded,Number(excluded));assert.equal(env.DB.sql.prepare('SELECT SUM(event_count) AS n FROM site_visits_daily').get().n,excluded?0:1);}
 });

@@ -54,7 +54,7 @@ export function visitsRange(url,now=new Date()){
 export async function siteVisitsReport(request,env){
  let range;try{range=visitsRange(new URL(request.url));}catch(e){return visitsJson({error:e.message},400);}
  if(!env.DB)return visitsJson({error:'The visits dashboard is temporarily unavailable.'},503);
- const {from,to,site}=range,where='day BETWEEN ? AND ?'+(site==='all'?'':' AND site=?'),bind=site==='all'?[from,to]:[from,to,site];
+ const {from,to,site}=range,where='event_count>0 AND day BETWEEN ? AND ?'+(site==='all'?'':' AND site=?'),bind=site==='all'?[from,to]:[from,to,site];
  const q=sql=>env.DB.prepare(sql).bind(...bind);
  try{
   const reads=await env.DB.batch([
@@ -66,7 +66,7 @@ export async function siteVisitsReport(request,env){
    q("SELECT country,SUM(event_count) AS count FROM site_visits_daily WHERE "+where+" AND event_name='page_view' GROUP BY country ORDER BY count DESC LIMIT 12"),
    q('SELECT event_name,page,target,SUM(event_count) AS count FROM site_visits_daily WHERE '+where+' GROUP BY event_name,page,target'),
    env.DB.prepare('SELECT event_name,SUM(event_count) AS count FROM testing_events GROUP BY event_name'),
-   env.DB.prepare('SELECT MIN(day) AS first_event FROM site_visits_daily')
+   env.DB.prepare('SELECT MIN(day) AS first_event FROM site_visits_daily WHERE event_count>0')
   ]);
   const groups=reads[0].results,all=reads[6].results,n=v=>Number(v)||0,sum=pred=>groups.filter(pred).reduce((a,r)=>a+n(r.count),0);
   const summary={pageViews:sum(r=>r.event_name==='page_view'),clicks:sum(r=>r.event_name==='click'),bookViews:all.filter(r=>r.event_name==='page_view'&&r.page.startsWith('/book/')).reduce((a,r)=>a+n(r.count),0),previewClicks:sum(r=>r.event_name==='click'&&r.target.startsWith('preview:')),buyClicks:sum(r=>r.event_name==='click'&&r.target.startsWith('buy:')),mirrorViews:all.filter(r=>r.event_name==='page_view'&&r.page==='/SocialMirror').reduce((a,r)=>a+n(r.count),0)};
