@@ -1,0 +1,9 @@
+# Approved character collection promoted to production
+
+The approved Testing storefront, Ideas illustrations, Social Mirror design and complete 17-book collection are now the production release. All 423 pages and the 236 character-illustrated reading pages match the files reviewed in the owner's ZIP. Published media and all 34 PDF records are frozen as a separate snapshot for future Testing changes.
+
+The studio character-review panel is omitted from the public homepage. The legacy Life Secrets sample now uses the current three-page sample as well. Covers, text, page counts, functional diagrams and navigation are retained. Prices, PayPal links, payment allocations, signed download verification, Social Mirror responses and session exclusions are unchanged.
+
+Validation: all 87 site tests pass, with simulated completed-payment delivery using `CHARACTER_COLLECTION_KEY` for the existing premium and shared checkouts. The compiled Worker serves all 17 complete editions and three-page samples byte-for-byte on live and Testing routes, keeps direct full-book URLs owner-only, promotes the correct media and Social Mirror illustration, removes the studio panel and updates the legacy sample. Source PDF hashes and all published media match the approved collection. Worker build, syntax and whitespace checks pass. The prior independent book checks cover every page's wording, links, bounds, visible text, covers and sample rendering. Browser automation is unavailable; compiled request checks and hosted HTTP verification supplement the existing DOM and PDF checks. No real payment or email was sent during verification.
+
+Rollback: saved version 173, tag `before-character-production-2026-11-03`, recorded in `design-versions/before-character-production.json`. Preserve existing runtime secrets and all D1 records during rollback.

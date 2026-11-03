@@ -1,6 +1,6 @@
 # OPortals recurring illustration character
 
-Status: character direction approved by the owner. Applied throughout all 17 Testing books and the Testing website. Keep live storefront assets and paid delivery on the existing published edition until explicitly promoted.
+Status: approved by the owner for production. The recurring character is used throughout the website and all 17 published books. Keep Testing and production snapshots independent for future design work.
 
 The user chose the small faceless figure in the “What if nobody noticed?” Spotlight Effect post as the reference. The character is a reflective person within an illustrated idea. Its design is deliberately simple enough for a reader to identify with it.
 

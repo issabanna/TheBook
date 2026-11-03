@@ -1,0 +1,9 @@
+{
+  "savedAt": "2026-11-03",
+  "reason": "Live rollback baseline before promoting the approved character collection",
+  "versionNumber": 173,
+  "versionId": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_3e7974b2866c8191a24e35443078035f",
+  "commitSha": "2c1f04ef553ce311f3babb530c12de0460ad212b",
+  "gitTag": "before-character-production-2026-11-03",
+  "rollback": "Deploy saved version 173 to restore the previous live storefront and paid editions while retaining the approved Testing preview. Preserve runtime secrets, payment allocations, profiles, session exclusions and all D1 data."
+}
