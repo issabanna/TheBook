@@ -1,0 +1,10 @@
+{
+  "label": "Before supplied reader reviews on Testing",
+  "saved_at": "2026-11-03",
+  "version_number": 163,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_3c629e93d2288191ba369b98295e5c46",
+  "commit_sha": "415c85f03d67c933aecfbdd3234510133cefac2c",
+  "git_tag": "before-testing-reader-reviews-2026-11-03",
+  "scope": "Restore the prior Testing feedback section. Live books, PDF files, payments and dashboard data remain unchanged."
+}

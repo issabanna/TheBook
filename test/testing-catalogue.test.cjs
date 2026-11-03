@@ -22,8 +22,11 @@ assert.equal(document.querySelector('#faq').textContent.includes('SneakPeak Idea
 assert.equal(document.querySelector('#bookshelf a[href$="/book/sneakpeak-ideas"]'),null);
 assert.equal(document.querySelectorAll('#editorial-feature').length,1);
 assert.equal(document.querySelector('#reader-reviews').hidden,false);
-assert.equal(document.querySelectorAll('.reader-feedback-grid article').length,2);
+assert.equal(document.querySelectorAll('.reader-feedback-grid article').length,4);
 assert.equal(document.querySelectorAll('#editorial-feature img').length,2);
+const suppliedReviews=JSON.parse(fs.readFileSync('src/reader-reviews.json','utf8'));
+for(const review of suppliedReviews){const card=document.querySelector('#reader-reviews a[href="/Testing/book/'+review.slug+'"]').closest('article');assert.equal(card.querySelector('blockquote').textContent,review.quote);assert.ok(!card.textContent.includes('Verified'));}
+
 for(const [filter,n]of [['original',10],['inspired',7],['all',17]]){run(`filterShelf('${filter}')`);assert.equal(visible().length,n)}
 for(const [slug,price]of Object.entries(run('bookPrices'))){
  history.pushState({},'','/Testing/book/'+slug);run('routeView()');
@@ -32,6 +35,7 @@ for(const [slug,price]of Object.entries(run('bookPrices'))){
  assert.ok([...document.querySelectorAll('#book-detail .actual-page-grid img')].every(img=>img.getAttribute('src').includes('/editorial-')));
  assert.ok(document.querySelector('#book-structured-data').textContent.includes(price));
  assert.ok(!document.querySelector('.editorial-owner-review'));
+ const review=suppliedReviews.find(r=>r.slug===slug);assert.equal(document.querySelector('#book-detail .book-reader-review blockquote').textContent,review.quote);
 }
 window.OPORTALS_OWNER=true;history.pushState({},'','/Testing/book/art-of-attention');run('routeView()');assert.ok(document.querySelector('.editorial-owner-review a[href="/Testing/books/art-of-attention.pdf?download=1"]'));
 const close=document.querySelector('#close-book-review');close.dispatchEvent(new window.Event('click',{bubbles:true,cancelable:true}));
@@ -41,7 +45,7 @@ for(const b of fresh){
  assert.equal(document.querySelectorAll('#book-detail .actual-page-grid figure').length,4,b.slug);
  assert.ok(document.querySelector('.detail-price').textContent.includes('$7.99'),b.slug);
  assert.ok(document.querySelector('.detail-small').textContent.includes('22 pages'),b.slug);
- assert.equal(document.querySelector('#book-detail a[data-purchase]'),null,b.slug);
+ assert.equal(document.querySelector('#book-detail a[data-purchase]'),null,b.slug);assert.equal(document.querySelector('#book-detail .book-reader-review'),null,b.slug);
  assert.ok(document.querySelector('#book-detail button[disabled]').textContent.includes('Checkout coming soon'),b.slug);
  assert.ok(document.querySelector('#book-detail a[href="'+b.pdf+'?download=1"]'),b.slug);
  assert.ok(document.querySelectorAll('#book-detail .actual-page-grid img').length===4);
