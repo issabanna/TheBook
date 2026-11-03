@@ -1,0 +1,10 @@
+{
+  "label": "Before reader-validation wording and full Testing promotion",
+  "saved_at": "2026-11-03",
+  "version_number": 164,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_7452f85bfb088191a1232c81a7eba2a7",
+  "commit_sha": "2354041c59f57d5846967be8333138b1ca597efb",
+  "git_tag": "before-reader-validation-production-2026-11-03",
+  "scope": "Restore the prior live store and the Testing-only 17-title catalogue/reviews. Existing customer data and runtime keys remain intact."
+}
