@@ -1,0 +1,10 @@
+{
+  "label": "Before The Art of Attention bottom promotion",
+  "saved_at": "2026-11-03",
+  "version_number": 167,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_b189ca6b59f48191b104a3276383ab00",
+  "commit_sha": "9cdb00f57a5dd59127a37f21f8952e811dd3f2d9",
+  "git_tag": "before-attention-bottom-bar-2026-11-03",
+  "scope": "Restore only the previous bottom promotion HTML; retain shared checkout allocations and delivery backend."
+}
