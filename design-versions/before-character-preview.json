@@ -1,0 +1,9 @@
+{
+  "savedAt": "2026-11-03",
+  "scope": "Testing homepage, Art of Attention illustration preview and future-post concept",
+  "versionNumber": 171,
+  "versionId": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_651c64e8bcac81918303829a72139bf2",
+  "commitSha": "c5c4ca215f7bb5e87e2fd2548fd4ef2fe4044005",
+  "gitTag": "before-character-preview-2026-11-03",
+  "rollback": "Restore Testing source and media from this tag, or deploy saved version 171. Preserve runtime secrets and D1 records. Live storefront and published PDF/media snapshots stay unchanged in this character study."
+}

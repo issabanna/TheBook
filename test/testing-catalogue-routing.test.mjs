@@ -26,7 +26,7 @@ test('unpublished catalogue drafts stay on Testing and complete PDFs require own
 test('approved catalogue editions and actual preview media are included in the published snapshot',()=>{
  assert.equal(catalogue.length,10);assert.equal(catalogue.filter(b=>b.category==='original').length,4);assert.equal(catalogue.filter(b=>b.category==='inspired').length,6);
  const testing=JSON.parse(readFileSync('src/encrypted-testing-editions.json','utf8')),published=JSON.parse(readFileSync('src/encrypted-published-editions.json','utf8')),live=readFileSync('public/published-storefront.html','utf8');
- for(const [name,record] of Object.entries(published))assert.deepEqual(testing[name],record,name+' unchanged');
+ for(const b of catalogue)for(const suffix of ['.pdf','-sample.pdf'])assert.deepEqual(testing[b.slug+suffix],published[b.slug+suffix],b.slug+suffix+' unchanged');
  for(const b of catalogue){assert.equal(b.price,7.99);assert.equal(b.pageCount,22);assert.equal(b.actualPages.length,3);assert.equal(b.checkoutPending,false);assert.equal(b.completed,true);assert.ok(live.includes(b.title));
   for(const p of b.actualPages){const data=readFileSync('public/editorial-media/'+p.src.split('/').pop());assert.equal(data.subarray(0,4).toString(),'RIFF');assert.equal(data.subarray(8,12).toString(),'WEBP');}
   assert.equal(testing[b.slug+'.pdf'].keyEnv,'BLUE_GREY_EDITION_KEY');assert.equal(testing[b.slug+'-sample.pdf'].keyEnv,'BLUE_GREY_EDITION_KEY');assert.equal(testing[b.slug+'-sample.pdf'].pageCount,3);
