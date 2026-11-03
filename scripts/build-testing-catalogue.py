@@ -75,18 +75,18 @@ def symbol(p,b,r):
   box((-56,-85),(56,-73),N);box((-56,75),(56,87),N);path(p,[pt(-43,-73),pt(43,-73),pt(34,-31),pt(6,0),pt(34,31),pt(43,75),pt(-43,75),pt(-34,31),pt(-6,0),pt(-34,-31)],WHITE,N,2*u);poly([(-30,-49),(30,-49),(0,-9)],A);poly([(-31,66),(31,66),(0,30)],'#d5b75e');l((0,0),(0,23),A,1)
 
 def diagram(p,b,labels,mode,r):
- x0,y0,x1,y1=r;w=x1-x0;h=y1-y0;A=b['accent'];T=b['tint'];rect(p,r,'#fafbf9',LINE,.6,.025)
+ x0,y0,x1,y1=r;w=x1-x0;h=y1-y0;A='#7d8791';rect(p,r,'#f8fafb','#aeb8c1',.65,.025)
  centers=[(x0+w*.19,y0+h*.5),(x0+w*.50,y0+h*.5),(x0+w*.81,y0+h*.5)]
  if mode%4==1:centers=[(x0+w*.20,y0+h*.50),(x0+w*.73,y0+h*.28),(x0+w*.73,y0+h*.73)]
  if mode%4==2:centers=[(x0+w*.22,y0+h*.28),(x0+w*.50,y0+h*.51),(x0+w*.79,y0+h*.74)]
  for j in range(2):
-  a,z=centers[j],centers[j+1];line(p,a,z,A,1.2);dx=z[0]-a[0];dy=z[1]-a[1];dist=math.hypot(dx,dy);ux=dx/dist;uy=dy/dist;mx=a[0]+dx*.62;my=a[1]+dy*.62
+  a,z=centers[j],centers[j+1];line(p,a,z,A,.65);dx=z[0]-a[0];dy=z[1]-a[1];dist=math.hypot(dx,dy);ux=dx/dist;uy=dy/dist;mx=a[0]+dx*.62;my=a[1]+dy*.62
   path(p,[(mx-ux*5-uy*3,my-uy*5+ux*3),(mx,my),(mx-ux*5+uy*3,my-uy*5-ux*3)],A)
  for i,((cx,cy),label) in enumerate(zip(centers,labels)):
   ww=w*.245;ss=8.2
   while len(wrap(label,ww-12,ss,'bold'))>3:ss-=.3
-  ls=wrap(label,ww-12,ss,'bold');hh=max(46,len(ls)*ss*1.4+18);rect(p,(cx-ww/2,cy-hh/2,cx+ww/2,cy+hh/2),A if i==2 else WHITE,A if i==2 else '#cdd8d8',.8,.055)
-  txt(p,label,cx-ww/2+6,cy-len(ls)*ss*1.4/2,ww-12,ss,'bold',WHITE if i==2 else NAVY,ss*1.4)
+  ls=wrap(label,ww-12,ss,'bold');hh=max(46,len(ls)*ss*1.4+18);rect(p,(cx-ww/2,cy-hh/2,cx+ww/2,cy+hh/2),['#fbfbfa','#e9f0f4','#efedf4'][i],'#a6b0ba',.55,.055)
+  txt(p,label,cx-ww/2+6,cy-len(ls)*ss*1.4/2,ww-12,ss,'bold','#303a43',ss*1.4)
 
 def margin(p,b,head,body,y):
  line(p,(313,y),(313,y+10),b['accent'],2);y=txt(p,head,322,y,68,7.5,'bold',b['accent'])+8

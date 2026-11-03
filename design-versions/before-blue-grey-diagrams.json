@@ -1,0 +1,12 @@
+{
+  "savedAt": "2026-11-03",
+  "reason": "Rollback baseline before approved C blue-grey book diagram styling",
+  "projectId": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "versionNumber": 168,
+  "versionId": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_3064f5c1da8881918416e45bdd8e6b4b",
+  "commitSha": "73b4436c45fd7545fb01e367ecf2bd182ba05f95",
+  "gitTag": "before-blue-grey-diagrams-2026-11-03",
+  "privatePdfBaseline": "private/checkpoints/before-blue-grey/manifest.json",
+  "scope": "17 complete books, all published preview media and three-page samples",
+  "rollback": "Deploy saved version 168, or restore the PDF manifests and preview media from this tag. Preserve runtime secrets, SHARED_BOOK_CHECKOUT_FROM and existing D1 payment allocations."
+}
