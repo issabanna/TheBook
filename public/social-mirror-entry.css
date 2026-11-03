@@ -55,3 +55,6 @@
 #social-mirror-section #landing>.steps strong{display:block;font:400 20px/1.2 OPortalsBook,Georgia,serif;color:#30382b;margin:8px 0}
 #social-mirror-section #landing>.steps p{font-size:14px;line-height:1.45;color:#59616a;margin:0}
 @media(max-width:760px){#social-mirror-section #landing>.steps{grid-template-columns:minmax(0,1fr);gap:10px;margin-top:18px}#social-mirror-section #landing>.steps>div{padding:14px 16px}}
+
+/* Recurring OPortals character — Testing */
+#social-mirror-section .cx-invitation-intro{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:16px;align-items:center}#social-mirror-section .cx-character-mirror{display:block;width:170px;height:130px;object-fit:contain}#social-mirror-section .cx-invitation-intro>div:first-child{max-width:none}@media(max-width:650px){#social-mirror-section .cx-invitation-intro{display:block;position:relative}#social-mirror-section .cx-character-mirror{position:absolute;right:0;top:28px;width:82px;height:70px}#social-mirror-section .cx-invitation-intro h1{padding-right:88px}}

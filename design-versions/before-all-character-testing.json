@@ -1,0 +1,10 @@
+{
+  "savedAt": "2026-11-03",
+  "scope": "Testing character collection rollout",
+  "versionNumber": 172,
+  "versionId": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_ebc0740c0900819189ef667cc123d4b9",
+  "commitSha": "4e4830c402d9d82fe90babf9d8cd3789399fc0c2",
+  "gitTag": "before-all-character-testing-2026-11-03",
+  "privatePdfBaseline": "private/checkpoints/before-character-collection/manifest.json",
+  "rollback": "Restore the Testing source, PDF manifest and draft media from this tag or deploy saved version 172. Preserve runtime secrets, payment allocations and session exclusion data. Published snapshots stay unchanged in this rollout."
+}

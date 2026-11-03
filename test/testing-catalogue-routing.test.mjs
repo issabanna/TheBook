@@ -2,8 +2,8 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const catalogue=JSON.parse(readFileSync('src/testing-catalogue.json','utf8')),origin='https://oportals.com',auth={'oai-authenticated-user-id':'owner','oai-authenticated-user-email':'owner@example.com'};
 test('unpublished catalogue drafts stay on Testing and complete PDFs require owner access',async()=>{
  const raw=crypto.getRandomValues(new Uint8Array(32)),key=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt']),pdf=new TextEncoder().encode('%PDF-1.7\nTesting fixture\n%%EOF'),records={},media={};
- for(const b of catalogue){for(const suffix of ['.pdf','-sample.pdf']){const iv=crypto.getRandomValues(new Uint8Array(12));records[b.slug+suffix]={keyEnv:'BLUE_GREY_EDITION_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,pdf)).toString('base64')};}media[b.cover.split('/').pop()]=Buffer.from('RIFF webp fixture').toString('base64');}
- const env={PREVIEW_V5_KEY:'fixture',BLUE_GREY_EDITION_KEY:Buffer.from(raw).toString('base64'),PREVIEW_OWNER_EMAIL:'owner@example.com'},h=createHandler({testing:{keyEnv:'PREVIEW_V5_KEY',publicPreview:true,liveStorefront:true},publishedDraft:true,testingDraft:'<script></script><body>Testing</body>',liveDraft:'<script></script><body>Live</body>',testingEditionBooks:records,draftMedia:media});
+ for(const b of catalogue){for(const suffix of ['.pdf','-sample.pdf']){const iv=crypto.getRandomValues(new Uint8Array(12));records[b.slug+suffix]={keyEnv:'CHARACTER_COLLECTION_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,pdf)).toString('base64')};}media[b.cover.split('/').pop()]=Buffer.from('RIFF webp fixture').toString('base64');}
+ const env={PREVIEW_V5_KEY:'fixture',CHARACTER_COLLECTION_KEY:Buffer.from(raw).toString('base64'),PREVIEW_OWNER_EMAIL:'owner@example.com'},h=createHandler({testing:{keyEnv:'PREVIEW_V5_KEY',publicPreview:true,liveStorefront:true},publishedDraft:true,testingDraft:'<script></script><body>Testing</body>',liveDraft:'<script></script><body>Live</body>',testingEditionBooks:records,draftMedia:media});
  const promoted=createHandler({testing:{keyEnv:'PREVIEW_V5_KEY',publicPreview:true,liveStorefront:true},publishedDraft:true,testingDraft:'<script></script><body>Testing</body>',liveDraft:'<script></script><body>Published</body>',testingEditionBooks:records,completedBooks:records,draftMedia:media,publishedMedia:media});
  for(const b of catalogue){
   assert.equal((await promoted(new Request(origin+'/book/'+b.slug),env)).status,200);
@@ -26,9 +26,9 @@ test('unpublished catalogue drafts stay on Testing and complete PDFs require own
 test('approved catalogue editions and actual preview media are included in the published snapshot',()=>{
  assert.equal(catalogue.length,10);assert.equal(catalogue.filter(b=>b.category==='original').length,4);assert.equal(catalogue.filter(b=>b.category==='inspired').length,6);
  const testing=JSON.parse(readFileSync('src/encrypted-testing-editions.json','utf8')),published=JSON.parse(readFileSync('src/encrypted-published-editions.json','utf8')),live=readFileSync('public/published-storefront.html','utf8');
- for(const b of catalogue)for(const suffix of ['.pdf','-sample.pdf'])assert.deepEqual(testing[b.slug+suffix],published[b.slug+suffix],b.slug+suffix+' unchanged');
+ for(const b of catalogue)for(const suffix of ['.pdf','-sample.pdf']){assert.notEqual(testing[b.slug+suffix].data,published[b.slug+suffix].data);assert.equal(published[b.slug+suffix].keyEnv,'BLUE_GREY_EDITION_KEY');}
  for(const b of catalogue){assert.equal(b.price,7.99);assert.equal(b.pageCount,22);assert.equal(b.actualPages.length,3);assert.equal(b.checkoutPending,false);assert.equal(b.completed,true);assert.ok(live.includes(b.title));
   for(const p of b.actualPages){const data=readFileSync('public/editorial-media/'+p.src.split('/').pop());assert.equal(data.subarray(0,4).toString(),'RIFF');assert.equal(data.subarray(8,12).toString(),'WEBP');}
-  assert.equal(testing[b.slug+'.pdf'].keyEnv,'BLUE_GREY_EDITION_KEY');assert.equal(testing[b.slug+'-sample.pdf'].keyEnv,'BLUE_GREY_EDITION_KEY');assert.equal(testing[b.slug+'-sample.pdf'].pageCount,3);
+  assert.equal(testing[b.slug+'.pdf'].keyEnv,'CHARACTER_COLLECTION_KEY');assert.equal(testing[b.slug+'-sample.pdf'].keyEnv,'CHARACTER_COLLECTION_KEY');assert.equal(testing[b.slug+'-sample.pdf'].pageCount,3);
  }
 });

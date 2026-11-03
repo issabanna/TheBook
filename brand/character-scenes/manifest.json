@@ -1,0 +1,20 @@
+{
+  "life": "brand/character-scenes/life.png",
+  "time": "brand/character-scenes/time.png",
+  "lead": "brand/character-scenes/lead.png",
+  "stand": "brand/character-scenes/stand.png",
+  "manager": "brand/character-scenes/manager.png",
+  "enough": "brand/character-scenes/enough.png",
+  "boundaries": "brand/character-scenes/boundaries.png",
+  "change": "brand/character-scenes/change.png",
+  "revision": "brand/character-scenes/revision.png",
+  "meditations": "brand/character-scenes/meditations.png",
+  "epictetus": "brand/character-scenes/epictetus.png",
+  "epicurus": "brand/character-scenes/epicurus.png",
+  "seneca": "brand/character-scenes/seneca.png",
+  "plato": "brand/character-scenes/plato.png",
+  "people": "brand/character-scenes/people.png",
+  "aristotle": "brand/character-scenes/aristotle.png",
+  "mirror": "brand/character-scenes/mirror.png",
+  "room": "brand/references/oportals-character-room.png"
+}

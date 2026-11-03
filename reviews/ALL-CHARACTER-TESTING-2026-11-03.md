@@ -1,0 +1,13 @@
+# Recurring character across the Testing collection
+
+Following approval of the character study, the direction now extends across all 17 Testing books and the Testing website. Seventeen new scene masters explore choices, time, boundaries, change, friendship, leadership and other relevant themes. The approved room scene and four-pose identity reference remain available for future posts.
+
+The 423-page collection retains every word and printed page number. Character scenes appear on 236 reading pages. Some existing image slots now use the character; other reading pages gain a white illustration area that keeps the original text and native diagrams together. Page counts are unchanged. Contents, exercises, reflection sheets and source references retain their practical layouts. Covers and the approved Art of Attention proof page are preserved. Every sample remains exactly three selected pages from its corresponding revised PDF.
+
+Testing homepage/Our Approach illustrations, Ideas scenes and the Social Mirror introduction now use the same character language. Social Mirror questions, scoring, result cards, sharing, private links and paid analysis are unchanged. Production storefront HTML, Social Mirror HTML, media and paid-edition snapshots are untouched. Prices, payment links, purchase delivery and persisted statistics are unchanged.
+
+A separate `CHARACTER_COLLECTION_KEY` encrypts all 34 Testing PDFs. The build shares identical immutable image byte strings across independent draft/published file maps to keep the expanded preview within the hosting size limit; changing a draft still cannot overwrite the published map. Original artwork masters stay in `brand/character-scenes`, with an explicit scene map and reusable generation guidance.
+
+Validation: independently checked all 423 pages for preserved word multisets, valid link destinations and text within the page. Inserted illustration boundaries preserve complete paragraphs and diagram labels; render-based ink checks detect obscured text. All 17 covers and the previously approved proof page render identically. All 17 three-page samples render identically to their full-PDF source pages. Contact sheets were visually reviewed. All 87 site tests pass. The built Worker serves all 34 intended Testing PDFs byte-for-byte and keeps paid files protected, media snapshots separate and Social Mirror artwork Testing-only. Build, syntax and whitespace checks pass. Browser automation is unavailable; rendered book review, DOM execution and hosted HTTP verification supplement the tests.
+
+Rollback baseline: version 172, tag `before-all-character-testing-2026-11-03`. The complete previous Testing PDFs and samples are retained privately. Preserve current runtime secrets and D1 records during rollback.

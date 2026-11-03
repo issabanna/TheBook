@@ -3,7 +3,7 @@ import readline from 'node:readline';
 console.log('Ready for edition key JSON on stdin (hidden).');
 const option=(name,fallback)=>process.argv.find(a=>a.startsWith(name+'='))?.slice(name.length+1)||fallback;
 const jobsPath=option('--jobs','private/blue-grey-editions/encryption-jobs.json'),keyEnv=option('--key-env','BLUE_GREY_EDITION_KEY');
-if(!['BLUE_GREY_EDITION_KEY','WHITE_PAPER_EDITION_KEY','CHARACTER_PREVIEW_KEY'].includes(keyEnv))throw Error('Unsupported edition key name');
+if(!['BLUE_GREY_EDITION_KEY','WHITE_PAPER_EDITION_KEY','CHARACTER_PREVIEW_KEY','CHARACTER_COLLECTION_KEY'].includes(keyEnv))throw Error('Unsupported edition key name');
 for await(const line of readline.createInterface({input:process.stdin})){
  const {key}=JSON.parse(line),raw=Buffer.from(key,'base64');if(raw.length!==32)throw Error('Invalid edition key');
  const k=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt']);

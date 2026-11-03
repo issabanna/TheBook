@@ -26,10 +26,19 @@ function bookTable(files){return '{'+Object.entries(files).map(([name,record])=>
 }).join(',')+'}';}
 const testingBookTable=bookTable(assets.testingEditionBooks),publishedBookTable=bookTable(assets.completedBooks);
 delete assets.testingEditionBooks;delete assets.completedBooks;
+// Keep independent media snapshots while sharing identical immutable byte strings.
+const mediaAssetRecords=[],mediaIndex=new Map();
+function mediaTable(files){return '{'+Object.entries(files).map(([name,data])=>{
+ const digest=createHash('sha256').update(data).digest('hex');
+ if(!mediaIndex.has(digest)){mediaIndex.set(digest,mediaAssetRecords.length);mediaAssetRecords.push(data);}
+ return JSON.stringify(name)+':mediaAssetRecords['+mediaIndex.get(digest)+']';
+}).join(',')+'}';}
+const testingMediaTable=mediaTable(assets.draftMedia),publishedMediaTable=mediaTable(assets.publishedMedia);
+delete assets.draftMedia;delete assets.publishedMedia;
 const payment=(await read('src/payment.mjs')).replace(/^import .*from .*;\n/gm,'');
 const worker=(await read('src/worker.mjs')).replace(/^import .*from '\.\/(?:payment|testing-events|contact|free-book-leads|social-mirror|social-mirror-report|visits|sessions|admin-auth|testing-catalogue|book-checkout).mjs';\n/gm,'');
 await mkdir(path.join(root,'dist/server'),{recursive:true});await mkdir(path.join(root,'dist/.openai'),{recursive:true});
-const bundle=(await read('src/shared-checkout-books.mjs'))+'\n'+(await read('src/testing-catalogue.mjs'))+'\n'+(await read('src/admin-auth.mjs'))+'\n'+payment+'\n'+(await read('src/social-mirror-report.mjs'))+'\n'+(await read('src/social-mirror.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/free-book-leads.mjs'))+'\n'+(await read('src/testing-events.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/contact.mjs'))+'\n'+(await read('src/visits.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/sessions.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/book-checkout.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+worker+'\nconst bookAssetRecords='+JSON.stringify(bookAssetRecords)+';\nconst assets='+JSON.stringify(assets)+';\nassets.testingEditionBooks='+testingBookTable+';\nassets.completedBooks='+publishedBookTable+';\nexport default { fetch: createHandler(assets) };\n';
+const bundle=(await read('src/shared-checkout-books.mjs'))+'\n'+(await read('src/testing-catalogue.mjs'))+'\n'+(await read('src/admin-auth.mjs'))+'\n'+payment+'\n'+(await read('src/social-mirror-report.mjs'))+'\n'+(await read('src/social-mirror.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/free-book-leads.mjs'))+'\n'+(await read('src/testing-events.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/contact.mjs'))+'\n'+(await read('src/visits.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/sessions.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+(await read('src/book-checkout.mjs')).replace(/^import .*from .*;\n/gm,'')+'\n'+worker+'\nconst bookAssetRecords='+JSON.stringify(bookAssetRecords)+';\nconst mediaAssetRecords='+JSON.stringify(mediaAssetRecords)+';\nconst assets='+JSON.stringify(assets)+';\nassets.draftMedia='+testingMediaTable+';\nassets.publishedMedia='+publishedMediaTable+';\nassets.testingEditionBooks='+testingBookTable+';\nassets.completedBooks='+publishedBookTable+';\nexport default { fetch: createHandler(assets) };\n';
 if(Buffer.byteLength(bundle)>63*1024*1024)throw new Error('Worker exceeds the safe deployment size budget: '+(Buffer.byteLength(bundle)/1024/1024).toFixed(1)+' MiB.');
 await writeFile(path.join(root,'dist/server/index.js'),bundle);
 await writeFile(path.join(root,'dist/.openai/hosting.json'),await read('.openai/hosting.json'));

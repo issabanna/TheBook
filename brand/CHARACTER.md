@@ -1,6 +1,6 @@
 # OPortals recurring illustration character
 
-Status: first study for Testing and one Art of Attention sample, awaiting the owner's design review. Keep live storefront assets and paid delivery on the existing published edition until explicitly promoted.
+Status: character direction approved by the owner. Applied throughout all 17 Testing books and the Testing website. Keep live storefront assets and paid delivery on the existing published edition until explicitly promoted.
 
 The user chose the small faceless figure in the “What if nobody noticed?” Spotlight Effect post as the reference. The character is a reflective person within an illustrated idea. Its design is deliberately simple enough for a reader to identify with it.
 
@@ -36,3 +36,7 @@ OPortals.com
 #OPortals #PhilosophyForEverydayLife #Attention #SelfReflection #FreshPerspectives #IllustratedPhilosophy
 
 Other scene directions for later posts: carrying only one useful question across a bridge (priorities); leaving a book open with a small marker to make return easier (attention); holding a tiny plant while a distant crowd looks elsewhere (usefulness rather than applause). Keep distinct scenes and a consistent character. These are draft concepts, not scheduled or published posts.
+
+## Collection artwork
+
+`brand/character-scenes/manifest.json` lists the original imagegen scene masters. `book-page-scenes.json` records the editorial scene choices for the reading pages. Reuse these identity references for future posts, with a new scene that serves each specific idea. Book layout trims only unused white canvas through PDF framing; the image masters remain intact. Covers, functional diagrams and reflection worksheets remain practical and readable.
