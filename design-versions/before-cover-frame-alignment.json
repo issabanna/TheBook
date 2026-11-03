@@ -1,0 +1,9 @@
+{
+  "savedAt": "2026-11-03",
+  "reason": "Rollback baseline before uniform square cover frames",
+  "versionNumber": 169,
+  "versionId": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_317d6bdd73788191a72b5a9fb63e2285",
+  "commitSha": "a50027e9dacf223da3a6ee95f5d6bf86b0a6ac30",
+  "gitTag": "before-cover-frame-alignment-2026-11-03",
+  "rollback": "Restore storefront cover CSS from this tag or deploy saved version 169. Keep runtime secrets and D1 data."
+}

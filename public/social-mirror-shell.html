@@ -29,8 +29,8 @@ footer{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:ce
 /* Testing catalogue compact shelf */
 .books{grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 12px;align-items:stretch}
 .books .product,.books .product.in-development{width:100%;padding:9px;min-width:0;border:1px solid #dfe4da;border-radius:8px;justify-self:stretch;background:#fff}
-.books .product .cover-shelf{height:auto;aspect-ratio:1/1;padding:0;overflow:hidden;border-radius:5px;background:#f6f7f2}
-.books .product .completed-cover{display:block;width:100%;max-width:none;height:100%;object-fit:cover;object-position:50% 12%;margin:0}
+.books .product .cover-button .cover-shelf{position:relative;display:block;width:100%;min-width:0;min-height:0;height:auto;aspect-ratio:1/1;padding:0;overflow:hidden;border-radius:5px;background:#f6f7f2}
+.books .product .cover-shelf .completed-cover{position:absolute;inset:0;display:block;width:100%;max-width:none;height:100%;max-height:none;aspect-ratio:auto;object-fit:cover;object-position:50% 12%;margin:0;border-radius:inherit;box-shadow:none}
 .books .product h3,.books .product:not(.in-development) h3{font-size:18px;line-height:1.12;min-height:40px;margin:10px 0 5px}
 .books .product>p{font-size:12px;line-height:1.45;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:35px;margin:7px 0}
 .books .product .source-author{font-size:10px;line-height:1.35;min-height:27px}
@@ -106,7 +106,7 @@ body{font-size:16px;line-height:1.5}.header nav a{font-size:13px;line-height:1.4
  #approach>details{margin-top:0}
 }
 </style><style id="editorial-preview-style">/* Editorial preview: book-specific identities and real pages, not promotional badges. */
-.product .cover-shelf:has(img[src*="editorial-"]){height:215px;border-radius:5px}
+
 .product .cover-shelf img[src*="editorial-"]{object-fit:cover!important;object-position:center 12%!important;width:100%;height:100%}
 img[src*="editorial-art-of-attention-cover"]{background:#183e53}
 img[src*="editorial-life-secrets-cover"]{background:#e6bf68}
@@ -131,7 +131,7 @@ img[src*="editorial-sneakpeak-ideas-cover"]{background:#eae3cf}
 .reader-feedback-grid h3{font:400 22px/1.2 OPortalsBook,Georgia,serif;margin:0 0 7px}
 .reader-feedback-grid p{font-size:14px;line-height:1.5;margin:0;color:#59616a}
 .editorial-owner-review{font-size:12px;line-height:1.5;color:#59616a}.editorial-owner-review a{color:#435443}
-@media(max-width:700px){.product .cover-shelf:has(img[src*="editorial-"]){height:185px}.editorial-feature{grid-template-columns:1fr;gap:16px;padding:20px 0;margin-top:18px}.editorial-feature h2{font-size:27px}.editorial-feature p{font-size:14px}.editorial-spread img{max-height:235px}.editorial-spread>a{padding:10px}.editorial-actions{gap:7px}.editorial-actions a{font-size:13px!important;min-height:44px}.reader-feedback-grid{grid-template-columns:1fr;gap:13px}.reader-feedback h2{font-size:25px}.reader-feedback-grid h3{font-size:21px}}
+@media(max-width:700px){.editorial-feature{grid-template-columns:1fr;gap:16px;padding:20px 0;margin-top:18px}.editorial-feature h2{font-size:27px}.editorial-feature p{font-size:14px}.editorial-spread img{max-height:235px}.editorial-spread>a{padding:10px}.editorial-actions{gap:7px}.editorial-actions a{font-size:13px!important;min-height:44px}.reader-feedback-grid{grid-template-columns:1fr;gap:13px}.reader-feedback h2{font-size:25px}.reader-feedback-grid h3{font-size:21px}}
 </style><style id="social-theme-preview-style">/* Anton font: Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFont.git)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
