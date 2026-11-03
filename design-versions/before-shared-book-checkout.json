@@ -1,0 +1,11 @@
+{
+  "label": "Before shared $7.99 book checkout",
+  "saved_at": "2026-11-03",
+  "version_number": 166,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_4228d1d9bb808191b4e26621ab88de32",
+  "commit_sha": "bcdb8b78cb3a017dc3fdbef30e0c2e374e5fe6a5",
+  "git_tag": "before-shared-book-checkout-2026-11-03",
+  "scope": "Restore preview-only status for unconnected books. Keep additive order/payment records and existing runtime keys.",
+  "rollback_after_payments": "After any shared purchase is verified, keep the new payment/delivery backend and allocation records. Pause sales with SHARED_BOOK_SALES_ENABLED=false and restore the earlier storefront HTML. A full version-166 rollback alone cannot deliver new shared-book receipts."
+}

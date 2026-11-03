@@ -1,3 +1,4 @@
+import {sharedCheckoutBooks} from './shared-checkout-books.mjs';
 const encoder = new TextEncoder();
 export class PaymentError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
@@ -5,6 +6,7 @@ export class PaymentError extends Error {
 export const SITE_URL = 'https://oportals.com';
 export const PAYPAL_LINK = 'https://www.paypal.com/ncp/payment/CS8XK9B6XLU64';
 export const BOOK_PRODUCTS = {
+ ...Object.fromEntries(sharedCheckoutBooks.map(b=>[b.slug,{title:b.title,price:'7.99',sku:b.slug.toUpperCase(),file:b.slug+'.pdf',link:PAYPAL_LINK,shared:true}])),
  'social-mirror-analysis':{title:'Social Mirror — Detailed Analysis',price:'4.00',sku:'SOCIAL-MIRROR-ANALYSIS',service:true,link:'https://www.paypal.com/ncp/payment/ET3BZ9GVKS3PS'},
  'life-secrets':{title:'Life Secrets',price:'7.99',sku:'LIFE-SECRETS',file:'life-secrets.pdf',link:PAYPAL_LINK},
  'art-of-attention':{title:'The Art of Attention',price:'8.99',sku:'ART-OF-ATTENTION',file:'art-of-attention.pdf',link:'https://www.paypal.com/ncp/payment/QE8P2E2FZBCEL'},
@@ -107,7 +109,7 @@ export async function decryptBook(asset, secret) {
   const key = await crypto.subtle.importKey('raw', fromBase64(secret), 'AES-GCM', false, ['decrypt']);
   return crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(asset.iv) }, key, fromBase64(asset.data));
 }
-export async function emailReceipt(payment, env, fetcher = fetch) {
+export async function emailReceipt(payment, env, fetcher = fetch, selectedBook=undefined) {
   if(paymentBook(payment,env)==='social-mirror-analysis')return {enabled:false};
   if (!emailReady(env)) return { enabled: false };
   const email = payment.get('payer_email');
@@ -117,14 +119,15 @@ export async function emailReceipt(payment, env, fetcher = fetch) {
   const exp = Math.floor(paidAt / 1000) + 7 * 86400;
   if (exp <= Date.now() / 1000) return { enabled: true, expired: true };
   const tx = payment.get('txn_id');
-  const book=paymentBook(payment,env),product=BOOK_PRODUCTS[book];
-  const token = await issueToken(tx, env, exp,book);
-  const link = `${SITE_URL}/download?t=${encodeURIComponent(token)}`;
+  const book=selectedBook===undefined?paymentBook(payment,env):selectedBook,product=book===null?null:BOOK_PRODUCTS[book];
+  if(book!==null&&!product)throw new PaymentError('Payment product does not match.',403);
+  const token=book===null?null:await issueToken(tx,env,exp,book);
+  const link=token?`${SITE_URL}/download?t=${encodeURIComponent(token)}`:`${SITE_URL}/paypal/return?tx=${encodeURIComponent(tx)}`;
   let response;
   try { response = await fetcher('https://api.resend.com/emails', {
-    method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `life-secrets-${tx}` },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: `Your ${product.title} book — OPortals`,
-      text: `Thank you for purchasing ${product.title} for $${payment.get('mc_gross')} USD.\n\nDownload your PDF:\n${link}\n\nThis private link expires seven days after purchase. Keep your PayPal receipt. You can return to ${SITE_URL}/paypal/return and use the transaction ID on your receipt to verify your purchase again.\n\n${product.title}` }), signal: AbortSignal.timeout(10000)
+    method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': selectedBook===undefined?`life-secrets-${tx}`:`book-${book||'verification'}-${tx}` },
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: product?`Your ${product.title} book — OPortals`:'Your OPortals book payment — complete your download',
+      text: product?`Thank you for purchasing ${product.title} for $${payment.get('mc_gross')} USD.\n\nDownload your PDF:\n${link}\n\nThis private link expires seven days after purchase. Keep your PayPal receipt. You can return to ${SITE_URL}/paypal/return and use the transaction ID on your receipt to verify your purchase again.\n\n${product.title}`:`Your $${payment.get('mc_gross')} USD book payment is confirmed.\n\nReturn in the browser you used to choose your book, then verify this payment to receive the matching PDF:\n${link}\n\nPayPal transaction: ${tx}\n\nIf you need help identifying your selected book, contact OPortals.` }), signal: AbortSignal.timeout(10000)
   }); } catch { throw new PaymentError('Receipt email is temporarily unavailable.', 503); }
   if (!response.ok) throw new PaymentError('Receipt email is temporarily unavailable.', 503);
   return { enabled: true, sent: true };

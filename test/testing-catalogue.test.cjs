@@ -1,5 +1,5 @@
 const test=require('node:test');
-test('Testing catalogue has 17 complete previews, distinct categories, correct prices and protected new checkout',()=>{
+test('Testing catalogue has 17 complete previews, distinct categories, correct prices and book-specific checkout actions',()=>{
 const {parseHTML}=require('linkedom');const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('public/testing-next.html','utf8'),{window}=parseHTML(html),document=window.document;
 window.HTMLElement.prototype.getBoundingClientRect=function(){return {height:600,width:200}};window.HTMLElement.prototype.scrollIntoView=function(){};window.HTMLElement.prototype.focus=function(){};window.HTMLElement.prototype.showModal=function(){this.open=true};window.HTMLElement.prototype.close=function(){this.open=false};
@@ -32,10 +32,10 @@ for(const [slug,price]of Object.entries(run('bookPrices'))){
  history.pushState({},'','/Testing/book/'+slug);run('routeView()');
  assert.ok(document.querySelector('#book-detail a[data-purchase="'+slug+'"][href="/checkout?book='+slug+'"]'));
  assert.equal(document.querySelectorAll('#book-detail .actual-page-grid figure').length,3);assert.ok(document.querySelector('.detail-price').textContent.includes('$'+price));
- assert.ok([...document.querySelectorAll('#book-detail .actual-page-grid img')].every(img=>img.getAttribute('src').includes('/editorial-')));
+ assert.ok([...document.querySelectorAll('#book-detail .actual-page-grid img')].every(img=>img.getAttribute('src').startsWith('/Testing/media/')));
  assert.ok(document.querySelector('#book-structured-data').textContent.includes(price));
  assert.ok(!document.querySelector('.editorial-owner-review'));
- const review=suppliedReviews.find(r=>r.slug===slug);assert.equal(document.querySelector('#book-detail .book-reader-review blockquote').textContent,review.quote);
+ const review=suppliedReviews.find(r=>r.slug===slug);if(review)assert.equal(document.querySelector('#book-detail .book-reader-review blockquote').textContent,review.quote);else assert.equal(document.querySelector('#book-detail .book-reader-review'),null);
 }
 window.OPORTALS_OWNER=true;history.pushState({},'','/Testing/book/art-of-attention');run('routeView()');assert.ok(document.querySelector('.editorial-owner-review a[href="/Testing/books/art-of-attention.pdf?download=1"]'));
 const close=document.querySelector('#close-book-review');close.dispatchEvent(new window.Event('click',{bubbles:true,cancelable:true}));
@@ -45,15 +45,15 @@ for(const b of fresh){
  assert.equal(document.querySelectorAll('#book-detail .actual-page-grid figure').length,3,b.slug);
  assert.ok(document.querySelector('.detail-price').textContent.includes('$7.99'),b.slug);
  assert.ok(document.querySelector('.detail-small').textContent.includes('22 pages'),b.slug);
- assert.equal(document.querySelector('#book-detail a[data-purchase]'),null,b.slug);assert.equal(document.querySelector('#book-detail .book-reader-review'),null,b.slug);
- assert.ok(document.querySelector('#book-detail button[disabled]').textContent.includes('Checkout coming soon'),b.slug);
+ assert.equal(document.querySelector('#book-detail a[data-purchase]').getAttribute('href'),'/checkout?book='+b.slug,b.slug);assert.equal(document.querySelector('#book-detail .book-reader-review'),null,b.slug);
+ assert.equal(document.querySelector('#book-detail button[disabled]'),null,b.slug);
  assert.ok(document.querySelector('#book-detail a[href="'+b.pdf+'?download=1"]'),b.slug);
  assert.ok(document.querySelectorAll('#book-detail .actual-page-grid img').length===3);
- const meta=JSON.parse(document.querySelector('#book-structured-data').textContent);assert.equal(meta.numberOfPages,22);assert.equal(meta.offers.availability,'https://schema.org/OutOfStock');
+ const meta=JSON.parse(document.querySelector('#book-structured-data').textContent);assert.equal(meta.numberOfPages,22);assert.equal(meta.offers.availability,'https://schema.org/InStock');
  if(b.category==='inspired')assert.ok(document.querySelector('.rights-note').textContent.includes(b.author));
 }
 run("filterShelf('all')");
-for(const b of fresh){const card=[...document.querySelectorAll('#bookshelf .product')].find(c=>c.querySelector('a').getAttribute('href').endsWith('/'+b.slug));assert.ok(card);assert.equal(card.querySelector('a[data-purchase]'),null);assert.ok(card.textContent.includes('$7.99'));}
-console.log('Testing UI verified: 10 Originals, 7 Reimagined, 17 cards; ten $7.99 complete editions with true three-page previews, owner PDF review, correct lengths/source credits, no premature checkout; existing four payment links preserved.');
+for(const b of fresh){const card=[...document.querySelectorAll('#bookshelf .product')].find(c=>c.querySelector('a').getAttribute('href').endsWith('/'+b.slug));assert.ok(card);assert.equal(card.querySelector('a[data-purchase]').getAttribute('href'),'/checkout?book='+b.slug);assert.ok(card.textContent.includes('$7.99'));}
+console.log('Testing UI verified: 10 Originals, 7 Reimagined, 17 cards; ten $7.99 complete editions with true three-page previews, owner PDF review, correct lengths/source credits, book-specific purchase actions; existing four payment links preserved.');
 
 });
