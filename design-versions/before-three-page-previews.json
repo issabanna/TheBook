@@ -1,0 +1,10 @@
+{
+  "label": "Before three-page book previews",
+  "saved_at": "2026-11-03",
+  "version_number": 165,
+  "project_id": "appgprj_6ad6efbf30888191840317ce97b28fbc",
+  "version_id": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_f109cc1f0964819198728dff75c93687",
+  "commit_sha": "c5624c0b0872bf901fc96e019a10f4cd74bf930c",
+  "git_tag": "before-three-page-previews-2026-11-03",
+  "scope": "Restore four-page previews on Testing and production. Full books, prices, payments and reader reviews remain intact."
+}

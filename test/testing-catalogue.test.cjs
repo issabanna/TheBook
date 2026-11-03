@@ -31,7 +31,7 @@ for(const [filter,n]of [['original',10],['inspired',7],['all',17]]){run(`filterS
 for(const [slug,price]of Object.entries(run('bookPrices'))){
  history.pushState({},'','/Testing/book/'+slug);run('routeView()');
  assert.ok(document.querySelector('#book-detail a[data-purchase="'+slug+'"][href="/checkout?book='+slug+'"]'));
- assert.equal(document.querySelectorAll('#book-detail .actual-page-grid figure').length,4);assert.ok(document.querySelector('.detail-price').textContent.includes('$'+price));
+ assert.equal(document.querySelectorAll('#book-detail .actual-page-grid figure').length,3);assert.ok(document.querySelector('.detail-price').textContent.includes('$'+price));
  assert.ok([...document.querySelectorAll('#book-detail .actual-page-grid img')].every(img=>img.getAttribute('src').includes('/editorial-')));
  assert.ok(document.querySelector('#book-structured-data').textContent.includes(price));
  assert.ok(!document.querySelector('.editorial-owner-review'));
@@ -42,18 +42,18 @@ const close=document.querySelector('#close-book-review');close.dispatchEvent(new
 const fresh=JSON.parse(fs.readFileSync('src/testing-catalogue.json','utf8'));
 for(const b of fresh){
  history.pushState({},'','/Testing/book/'+b.slug);run('routeView()');
- assert.equal(document.querySelectorAll('#book-detail .actual-page-grid figure').length,4,b.slug);
+ assert.equal(document.querySelectorAll('#book-detail .actual-page-grid figure').length,3,b.slug);
  assert.ok(document.querySelector('.detail-price').textContent.includes('$7.99'),b.slug);
  assert.ok(document.querySelector('.detail-small').textContent.includes('22 pages'),b.slug);
  assert.equal(document.querySelector('#book-detail a[data-purchase]'),null,b.slug);assert.equal(document.querySelector('#book-detail .book-reader-review'),null,b.slug);
  assert.ok(document.querySelector('#book-detail button[disabled]').textContent.includes('Checkout coming soon'),b.slug);
  assert.ok(document.querySelector('#book-detail a[href="'+b.pdf+'?download=1"]'),b.slug);
- assert.ok(document.querySelectorAll('#book-detail .actual-page-grid img').length===4);
+ assert.ok(document.querySelectorAll('#book-detail .actual-page-grid img').length===3);
  const meta=JSON.parse(document.querySelector('#book-structured-data').textContent);assert.equal(meta.numberOfPages,22);assert.equal(meta.offers.availability,'https://schema.org/OutOfStock');
  if(b.category==='inspired')assert.ok(document.querySelector('.rights-note').textContent.includes(b.author));
 }
 run("filterShelf('all')");
 for(const b of fresh){const card=[...document.querySelectorAll('#bookshelf .product')].find(c=>c.querySelector('a').getAttribute('href').endsWith('/'+b.slug));assert.ok(card);assert.equal(card.querySelector('a[data-purchase]'),null);assert.ok(card.textContent.includes('$7.99'));}
-console.log('Testing UI verified: 10 Originals, 7 Reimagined, 17 cards; ten $7.99 complete editions with true four-page previews, owner PDF review, correct lengths/source credits, no premature checkout; existing four payment links preserved.');
+console.log('Testing UI verified: 10 Originals, 7 Reimagined, 17 cards; ten $7.99 complete editions with true three-page previews, owner PDF review, correct lengths/source credits, no premature checkout; existing four payment links preserved.');
 
 });

@@ -179,8 +179,8 @@ def sampler():
 def samples():
  for stem,ns in SAMPLES.items():
   book=fitz.open(OUT/(stem+'.pdf'));d=fitz.open()
-  for n in ns:d.insert_pdf(book,from_page=n-1,to_page=n-1,links=False)
-  d.set_metadata({'title':TITLES[stem]+' — Four-page sample','author':'OPortals','subject':'Cover and three selected pages; original page numbers retained.'})
+  for n in ns[:3]:d.insert_pdf(book,from_page=n-1,to_page=n-1,links=False)
+  d.set_metadata({'title':TITLES[stem]+' — Three-page sample','author':'OPortals','subject':'Cover and three selected pages; original page numbers retained.'})
   p=OUT/(stem+'-sample.pdf');d.save(p,garbage=4,deflate=True);(DEL/p.name).write_bytes(p.read_bytes())
 
 if __name__=='__main__':

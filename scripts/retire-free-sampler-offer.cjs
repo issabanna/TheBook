@@ -9,7 +9,7 @@ const storeNote=document.querySelector('.store-note');
 if(storeNote)storeNote.textContent=storeNote.textContent.replace('SneakPeak Ideas is always free. ','');
 for(const detail of document.querySelectorAll('#faq details')){
  const title=detail.querySelector('summary')?.textContent.trim();
- if(title==='Can I see inside before buying?')detail.querySelector('p').textContent='Yes. Each available paid book has a four-page preview: the cover and three selected pages. Explore the actual pages before choosing your book.';
+ if(title==='Can I see inside before buying?')detail.querySelector('p').textContent='Yes. Each available paid book has a three-page preview: the cover and two selected pages. Explore the actual pages before choosing your book.';
  if(title==='Can I buy a book right now?')detail.querySelector('p').textContent=detail.querySelector('p').textContent.replace(' SneakPeak Ideas is free.','');
 }
 html=document.toString();

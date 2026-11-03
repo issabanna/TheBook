@@ -1,4 +1,4 @@
-"""Build ten short illustrated books and their true four-page samples.
+"""Build ten short illustrated books and their true three-page samples.
 
 Manuscripts live in private/catalogue-expansion, never in the public build.
 Artwork is original vector composition. Existing editions are not modified.
@@ -182,9 +182,9 @@ for b in BOOKS:
  fieldguide(d,b);worksheet(d,b);sources(d,b);assert len(d)==22
  for rr,n in toc:d[2].insert_link({'kind':fitz.LINK_GOTO,'from':rr,'page':n,'to':fitz.Point(0,0)})
  d.set_metadata({'title':b['title'],'author':'OPortals','subject':b['subtitle']+(' Independent commentary on '+b['author']+'; not a translation.' if b['author'] else ''),'keywords':'illustrated philosophy, everyday life, reflection','creator':'OPortals editorial studio'});d.subset_fonts();full=OUT/(b['slug']+'.pdf');d.save(full,garbage=4,deflate=True,clean=True)
- sample=fitz.open();selected=[1,4,5,10]
+ sample=fitz.open();selected=[1,4,5]
  for n in selected:sample.insert_pdf(d,from_page=n-1,to_page=n-1,links=False)
- sample.set_metadata({'title':b['title']+' — Four-page sample','author':'OPortals','subject':'Cover and three selected pages; original page numbers retained.'});sample.save(OUT/(b['slug']+'-sample.pdf'),garbage=4,deflate=True)
+ sample.set_metadata({'title':b['title']+' — Three-page sample','author':'OPortals','subject':'Cover and three selected pages; original page numbers retained.'});sample.save(OUT/(b['slug']+'-sample.pdf'),garbage=4,deflate=True)
  doc=fitz.open(full);alltext=' '.join(p.get_text() for p in doc);wordcount=len(re.findall(r'\b\w+\b',alltext));assert wordcount>1400,(b['slug'],wordcount)
  # Visible/selectable type remains within the page; figures and notes fit fixed envelopes.
  for p in doc:
@@ -197,9 +197,9 @@ for b in BOOKS:
   pix=doc[n-1].get_pixmap(matrix=fitz.Matrix(1.5,1.5),alpha=False);im=Image.frombytes('RGB',[pix.width,pix.height],pix.samples);name='testing-collection-'+b['slug']+('-cover' if n==1 else '-page-'+str(n))+'.webp';im.save(MEDIA/name,'WEBP',quality=86,method=6);imgs.append({'src':'/Testing/media/'+name,'page':n})
   if n==1:cover_images.append(im.copy())
  for f in [b['slug']+'.pdf',b['slug']+'-sample.pdf']:(DEL/f).write_bytes((OUT/f).read_bytes())
- c0=b['chapters'][0];catalogue.append(dict(id='new-'+b['slug'],slug=b['slug'],title=b['title'],category=b['category'],subtitle=b['subtitle'],author=b['author'],source=b['url'],sourceTitle=b['source'],topic=b['subtitle'].split(',')[0].upper(),price=7.99,pageCount=22,completed=True,checkoutPending=True,pdf='/Testing/books/'+b['slug']+'.pdf',samplePdf='/Testing/books/'+b['slug']+'-sample.pdf',cover=imgs[0]['src'],actualPages=imgs,facts=dict(benefits=[b['chapters'][i]['practice'] for i in [0,3,6]],ideas=[b['chapters'][i]['title'] for i in [0,3,6]],everyday=b['intro'],theme=b['source'] if b['author'] else b['subtitle']),captions=['Cover',c0['title'],'Bring it into your day',b['chapters'][3]['title']]))
- report.append(dict(slug=b['slug'],pages=22,samplePages=4,words=wordcount,bytes=full.stat().st_size,chapters=8,links=len(doc[2].get_links()),sourceReferences=sum(bool(c['ref']) for c in b['chapters'])))
- print(b['slug']+': 22 pages / '+str(wordcount)+' words / four-page sample')
+ c0=b['chapters'][0];catalogue.append(dict(id='new-'+b['slug'],slug=b['slug'],title=b['title'],category=b['category'],subtitle=b['subtitle'],author=b['author'],source=b['url'],sourceTitle=b['source'],topic=b['subtitle'].split(',')[0].upper(),price=7.99,pageCount=22,completed=True,checkoutPending=True,pdf='/Testing/books/'+b['slug']+'.pdf',samplePdf='/Testing/books/'+b['slug']+'-sample.pdf',cover=imgs[0]['src'],actualPages=imgs,facts=dict(benefits=[b['chapters'][i]['practice'] for i in [0,3,6]],ideas=[b['chapters'][i]['title'] for i in [0,3,6]],everyday=b['intro'],theme=b['source'] if b['author'] else b['subtitle']),captions=['Cover',c0['title'],'Bring it into your day']))
+ report.append(dict(slug=b['slug'],pages=22,samplePages=3,words=wordcount,bytes=full.stat().st_size,chapters=8,links=len(doc[2].get_links()),sourceReferences=sum(bool(c['ref']) for c in b['chapters'])))
+ print(b['slug']+': 22 pages / '+str(wordcount)+' words / three-page sample')
 (R/'src/testing-catalogue.json').write_text(json.dumps(catalogue,ensure_ascii=False,separators=(',',':')))
 (PRIVATE/'quality-report.json').write_text(json.dumps(report,indent=2));(DEL/'quality-report.json').write_text(json.dumps(report,indent=2))
 # A quick contact sheet for visual inspection, generated from the actual PDFs.
@@ -207,5 +207,5 @@ sheet=Image.new('RGB',(1500,1120),'#f0f2ef');dr=ImageDraw.Draw(sheet)
 for i,im in enumerate(cover_images):
  im.thumbnail((270,470));x=15+(i%5)*300;y=12+(i//5)*560;sheet.paste(im,(x+(270-im.width)//2,y));dr.text((x,y+480),catalogue[i]['title'][:35],fill='#183049')
 sheet.save(DEL/'covers-contact-sheet.jpg',quality=92)
-(DEL/'README.txt').write_text('Ten new OPortals short illustrated books. Each complete edition has 22 pages, eight ideas, worked situations, a seven-day field guide, a reflection sheet and credits. Each sample has four actual pages. Four are Originals; six are independent companions to credited ancient sources, not translations. Testing review only: planned price $7.99 USD per new title; new checkout links are not connected. Existing published books are unchanged.\n')
+(DEL/'README.txt').write_text('Ten new OPortals short illustrated books. Each complete edition has 22 pages, eight ideas, worked situations, a seven-day field guide, a reflection sheet and credits. Each sample has three actual pages. Four are Originals; six are independent companions to credited ancient sources, not translations. Testing review only: planned price $7.99 USD per new title; new checkout links are not connected. Existing published books are unchanged.\n')
 print('All ten books and samples built; existing editions untouched.')
