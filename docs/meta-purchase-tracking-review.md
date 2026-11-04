@@ -18,7 +18,8 @@ Prepared 4 November 2026, Asia/Amman. **Not deployed. Production and Testing rem
 
 The existing Privacy & measurement dialog gains a separate, unchecked option:
 
-> **Allow Meta advertising measurement**  
+> **Allow Meta advertising measurement**
+>
 > Optional. Share book views, checkout activity and verified purchases with Meta to measure our advertising. Meta may link this activity to your account. No payer details or payment credentials are shared. Leave unchecked to keep it off.
 
 Existing analytics acceptance alone does not enable Meta. No new automatic consent popup is introduced. Checkout/receipt pages get access to the same choices where the full storefront dialog is absent.
