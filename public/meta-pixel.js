@@ -46,7 +46,7 @@
  }
  function init(){
   if(!allowed())return false;sanitizeAddress();if(initialized){if(!sdkGranted){window.fbq('consent','grant');sdkGranted=true;}return true;}initialized=true;
-  if(!window.fbq){const fbq=function(){fbq.callMethod?fbq.callMethod.apply(fbq,arguments):fbq.queue.push(arguments);};fbq.queue=[];fbq.loaded=true;fbq.version='2.0';window.fbq=fbq;if(!window._fbq)window._fbq=fbq;}
+  if(!window.fbq){const fbq=function(){fbq.callMethod?fbq.callMethod.apply(fbq,arguments):fbq.queue.push(arguments);};fbq.push=fbq;fbq.queue=[];fbq.loaded=true;fbq.version='2.0';window.fbq=fbq;if(!window._fbq)window._fbq=fbq;}
   const fbq=window.fbq;fbq.disablePushState=true;
   fbq('consent','grant');sdkGranted=true;fbq('set','autoConfig',false,ID);fbq('init',ID);
   const script=document.createElement('script');script.async=true;script.id='oportals-meta-sdk';script.src='https://connect.facebook.net/en_US/fbevents.js';document.head.appendChild(script);

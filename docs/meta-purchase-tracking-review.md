@@ -1,6 +1,6 @@
-# OPortals Meta purchase tracking — pre-production review
+# OPortals Meta purchase tracking — production release
 
-Prepared 4 November 2026, Asia/Amman. **Testing-only release. Public pages, checkout and delivery remain pinned to version 179. Meta is not activated for public traffic.**
+Prepared 4 November 2026, Asia/Amman. **Production promotion authorized after Testing review. Public pages now use the reviewed Meta integration; separate visitor consent is required. Testing remains isolated. Server-side Purchase delivery still requires the missing CAPI secret.**
 
 ## Existing assets and inspection
 
@@ -10,7 +10,7 @@ Prepared 4 November 2026, Asia/Amman. **Testing-only release. Public pages, chec
 - Inspected existing GA4 loader/SPA navigation, measurement controls, shared and dedicated PayPal checkout paths, PDT verification, independently verified IPNs, transaction allocation, receipt recovery, protected PDF delivery and the conversion ledger before editing.
 - Existing GA4 property: `G-H7Z99E31L4`.
 - Existing product configuration confirms **The Art of Attention: 32-page English digital PDF, $8.99 USD**. Other books retain their own configured identifiers/prices.
-- Hosting environment revision 29 had no Meta token or sandbox merchant configuration. No environment variables, campaigns, budgets or social schedules were changed. The Testing release preserves the approved public handler and public assets.
+- Hosting environment revision 29 had no Meta token or sandbox merchant configuration. Production runtime configuration enables the existing pixel in live mode and sets a new-purchase activation timestamp. The CAPI secret is not configured. No PayPal settings, campaigns, budgets, social schedules, book files or prices were changed.
 
 ## Changes prepared
 
@@ -62,7 +62,7 @@ The prepared CSP adds only `https://connect.facebook.net` to script sources and 
 
 ## Verification completed
 
-**124 automated tests passed; none failed or skipped.** This includes 17 Meta tests, three Testing-isolation tests and all 104 existing regression tests.
+**127 automated tests passed; none failed or skipped.** This includes 17 Meta tests, three historical Testing-isolation tests, three production-promotion tests and all 104 existing regression tests.
 
 | Scenario | Local result |
 | --- | --- |
@@ -139,4 +139,4 @@ Reference documentation: [Meta CAPI usage](https://developers.facebook.com/docs/
 
 Review branch: `meta-purchase-tracking-review`, based on production version 179 (`a1f34252bb4eb5d6d9eab210e88c8f587bace5f9`).
 
-The owner authorized deployment to Testing only. The release dispatcher serves new code under `/Testing` and the exact approved version-179 handler for public requests, sharing unchanged immutable book/media assets. `/Testing/Meta` is an owner-only review/status page, and Testing script URLs remain namespaced. Testing is forced into isolated Meta test mode with TEST10333; browser dispatch stays disabled and genuine live payments cannot become test Purchase events. Existing live PayPal settings are preserved. The additive `0012_meta_purchase_tracking.sql` migration creates tracking tables/indexes only. No secret or environment mutation is part of this release. Before public activation, configure the secret securely, finish actual external testing, and explicitly promote the reviewed code instead of the frozen public handler. The native version-179 checkpoint remains available for rollback.
+After the Testing-only version 180 passed hosted checks, the owner explicitly authorized production promotion. Public routes now use the reviewed handler; `/Testing` continues to force isolated Meta test mode with TEST10333. Existing PayPal settings and encrypted book files remain unchanged. The Meta runtime settings enable consent-gated browser tracking in live mode and establish a new-purchase cutover; the access token is still absent, so actual CAPI delivery and Meta Test Events receipt remain unverified. The version-180 saved deployment and commit are recorded in `design-versions/before-meta-production.json` for rollback. No ads were launched and the $3/day draft campaign budget was not changed.

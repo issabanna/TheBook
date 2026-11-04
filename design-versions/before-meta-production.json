@@ -1,0 +1,7 @@
+{
+  "commit": "b8e988a1c31f4f87111c2325bfe19f7c3f42cf02",
+  "versionNumber": 180,
+  "savedVersion": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_682089a1794881918a4fae9c19eef61a",
+  "environmentRevision": 29,
+  "scope": "Before approved Meta production promotion. Version 180 isolates Meta review to Testing and retains public version-179 behavior. Redeploy this saved version to roll back the public integration."
+}
