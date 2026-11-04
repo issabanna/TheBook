@@ -12,7 +12,7 @@ fs.copyFileSync('src/encrypted-testing-editions.json','src/encrypted-published-e
 fs.mkdirSync('public/published-editorial-media',{recursive:true});
 for(const file of fs.readdirSync('public/editorial-media'))fs.copyFileSync(path.join('public/editorial-media',file),path.join('public/published-editorial-media',file));
 const editions=JSON.parse(fs.readFileSync('src/encrypted-testing-editions.json','utf8'));
-const sampleFolders={CHARACTER_COLLECTION_KEY:'character-collection',CHARACTER_PREVIEW_KEY:'character-preview',WHITE_PAPER_EDITION_KEY:'white-interiors',BLUE_GREY_EDITION_KEY:'blue-grey-editions'};
+const sampleFolders={ARTWORK_COLLECTION_KEY:'artwork-edition',CHARACTER_COLLECTION_KEY:'character-collection',CHARACTER_PREVIEW_KEY:'character-preview',WHITE_PAPER_EDITION_KEY:'white-interiors',BLUE_GREY_EDITION_KEY:'blue-grey-editions'};
 const folder=sampleFolders[editions['life-secrets-sample.pdf']?.keyEnv];
 const sample=folder?'private/'+folder+'/life-secrets-sample.pdf':'private/publishing-preview/life-secrets-sample.pdf';
 if(!fs.existsSync(sample))throw Error('Current full-edition sample source is missing: '+sample);

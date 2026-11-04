@@ -26,7 +26,7 @@ test('a missing revised-edition key fails closed instead of returning another bo
  assert.equal(await (await h(new Request(origin+'/books/art-of-attention-sample.pdf'),env)).text(),'%PDF Published edition');
 });
 test('social-theme and white-paper editions use separate keys and fail closed without them',async()=>{
- for(const keyName of ['PREMIUM_COLLECTION_KEY','WHITE_PAPER_EDITION_KEY','CHARACTER_PREVIEW_KEY','CHARACTER_COLLECTION_KEY']){
+ for(const keyName of ['PREMIUM_COLLECTION_KEY','WHITE_PAPER_EDITION_KEY','CHARACTER_PREVIEW_KEY','CHARACTER_COLLECTION_KEY','ARTWORK_COLLECTION_KEY']){
  const {handler:h,env}=await fixture(keyName);
  assert.equal(await (await h(new Request(origin+'/Testing/books/art-of-attention-sample.pdf'),env)).text(),'%PDF Revised Testing edition');
  assert.equal(await (await h(new Request(origin+'/books/art-of-attention-sample.pdf'),env)).text(),'%PDF Published edition');

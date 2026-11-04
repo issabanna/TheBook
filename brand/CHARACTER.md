@@ -10,7 +10,7 @@ The user chose the small faceless figure in the “What if nobody noticed?” Sp
 - A plain white long shirt/tunic, slim blue-grey legs and small simple shoes. Match the supplied model sheet's proportions.
 - Delicate watercolour texture, clean white paper, soft slate-blue shadows, sage foliage and occasional muted ochre.
 - A useful action or a particular situation: noticing, choosing, reading, returning or helping. A change of gesture should support the idea on the page.
-- Keep illustrations legible at book and phone sizes. Give the character and text separate space; let diagrams keep their subtle frames and pale fills.
+- Keep illustrations legible at book and phone sizes. Use the artwork itself to explain the idea. Vary between scenes, visual metaphors, close-ups and sequences; keep captions unboxed. Practical writing fields may retain their functional outlines.
 - Keep OPortals' existing wordmark and fonts. Covers and existing titles stay unchanged in this study.
 
 Reference: `brand/references/oportals-character-poses.png`. The generated Library original remains at `/workspace/generated_images/exec-fa016036-025e-406c-9618-b2261e892734.png`. Use this image as the identity reference for future generations. Describe the scene separately; do not reinvent the character each time.
@@ -40,3 +40,7 @@ Other scene directions for later posts: carrying only one useful question across
 ## Collection artwork
 
 `brand/character-scenes/manifest.json` lists the original imagegen scene masters. `book-page-scenes.json` records the editorial scene choices for the reading pages. Reuse these identity references for future posts, with a new scene that serves each specific idea. Book layout trims only unused white canvas through PDF framing; the image masters remain intact. Covers, functional diagrams and reflection worksheets remain practical and readable.
+
+## Approved varied artwork edition
+
+The owner approved the varied full-page studies for Testing and production. `brand/artwork-edition/manifest.json` maps distinct compositions to preserved imagegen masters and PDF viewports. `scripts/build-artwork-edition.py` applies the artwork across all 17 complete books and generates matching three-page samples and website page images. Covers, authored arguments, source references, page counts and functional links remain authoritative. Do not revert to a decorative character above a separate rectangle flowchart.

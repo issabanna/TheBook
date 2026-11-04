@@ -1,0 +1,150 @@
+{
+  "compass": {
+    "file": "brand/artwork-edition/agency.png",
+    "quadrant": 0
+  },
+  "cooperation": {
+    "file": "brand/artwork-edition/agency.png",
+    "quadrant": 1
+  },
+  "acceptance": {
+    "file": "brand/artwork-edition/agency.png",
+    "quadrant": 2
+  },
+  "gate": {
+    "file": "brand/artwork-edition/agency.png",
+    "quadrant": 3
+  },
+  "detail": {
+    "file": "brand/artwork-edition/thinking.png",
+    "quadrant": 0
+  },
+  "shadow": {
+    "file": "brand/artwork-edition/thinking.png",
+    "quadrant": 1
+  },
+  "clear-mirror": {
+    "file": "brand/artwork-edition/thinking.png",
+    "quadrant": 2
+  },
+  "perspectives": {
+    "file": "brand/artwork-edition/thinking.png",
+    "quadrant": 3
+  },
+  "priority": {
+    "file": "brand/artwork-edition/work.png",
+    "quadrant": 0
+  },
+  "handover": {
+    "file": "brand/artwork-edition/work.png",
+    "quadrant": 1
+  },
+  "next-step": {
+    "file": "brand/artwork-edition/work.png",
+    "quadrant": 2
+  },
+  "rest": {
+    "file": "brand/artwork-edition/work.png",
+    "quadrant": 3
+  },
+  "burden": {
+    "file": "brand/artwork-edition/living.png",
+    "quadrant": 0
+  },
+  "listening": {
+    "file": "brand/artwork-edition/living.png",
+    "quadrant": 1
+  },
+  "roots": {
+    "file": "brand/artwork-edition/living.png",
+    "quadrant": 2
+  },
+  "choice": {
+    "file": "brand/artwork-edition/living.png",
+    "quadrant": 3
+  },
+  "pause": {
+    "file": "brand/artwork-edition/pause.png",
+    "quadrant": null
+  },
+  "purpose": {
+    "file": "brand/artwork-edition/purpose.png",
+    "quadrant": null
+  },
+  "judgment": {
+    "file": "brand/artwork-edition/judgment.png",
+    "quadrant": null
+  },
+  "life": {
+    "file": "brand/character-scenes/life.png",
+    "quadrant": null
+  },
+  "time": {
+    "file": "brand/character-scenes/time.png",
+    "quadrant": null
+  },
+  "lead": {
+    "file": "brand/character-scenes/lead.png",
+    "quadrant": null
+  },
+  "stand": {
+    "file": "brand/character-scenes/stand.png",
+    "quadrant": null
+  },
+  "manager": {
+    "file": "brand/character-scenes/manager.png",
+    "quadrant": null
+  },
+  "enough": {
+    "file": "brand/character-scenes/enough.png",
+    "quadrant": null
+  },
+  "boundaries": {
+    "file": "brand/character-scenes/boundaries.png",
+    "quadrant": null
+  },
+  "change": {
+    "file": "brand/character-scenes/change.png",
+    "quadrant": null
+  },
+  "revision": {
+    "file": "brand/character-scenes/revision.png",
+    "quadrant": null
+  },
+  "meditations": {
+    "file": "brand/character-scenes/meditations.png",
+    "quadrant": null
+  },
+  "epictetus": {
+    "file": "brand/character-scenes/epictetus.png",
+    "quadrant": null
+  },
+  "epicurus": {
+    "file": "brand/character-scenes/epicurus.png",
+    "quadrant": null
+  },
+  "seneca": {
+    "file": "brand/character-scenes/seneca.png",
+    "quadrant": null
+  },
+  "plato": {
+    "file": "brand/character-scenes/plato.png",
+    "quadrant": null
+  },
+  "people": {
+    "file": "brand/character-scenes/people.png",
+    "quadrant": null
+  },
+  "aristotle": {
+    "file": "brand/character-scenes/aristotle.png",
+    "quadrant": null
+  },
+  "mirror": {
+    "file": "brand/character-scenes/mirror.png",
+    "quadrant": null
+  },
+  "room": {
+    "file": "brand/references/oportals-character-room.png",
+    "quadrant": null
+  }
+}

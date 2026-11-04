@@ -7,13 +7,14 @@ const read=p=>readFile(path.join(root,p),'utf8');
 await rm(path.join(root,'dist'),{recursive:true,force:true});
 const bookManifest=JSON.parse(await read('src/encrypted-preview-books.json'));
 const previewBooks=Object.fromEntries(await Promise.all(Object.entries(bookManifest).map(async([name,record])=>[name,record.assetFile?JSON.parse(await read('src/'+record.assetFile)):record])));
-const publishedEditions=JSON.parse(await read('src/encrypted-published-editions.json'));
+async function editionRecords(file){const records=JSON.parse(await read(file));return Object.fromEntries(await Promise.all(Object.entries(records).map(async([name,record])=>[name,record.assetFile?JSON.parse(await read('src/'+record.assetFile)):record])));}
+const publishedEditions=await editionRecords('src/encrypted-published-editions.json');
 const publishedMedia={};
 for(const file of await readdir(path.join(root,'public/published-editorial-media')))publishedMedia[file]=(await readFile(path.join(root,'public/published-editorial-media',file))).toString('base64');
 const socialMirrorPublished=await read('public/social-mirror-published.html');
 execFileSync(process.execPath,['scripts/integrate-social-mirror-shell.cjs'],{cwd:root,stdio:'inherit'});
 const testingDraft=await read('public/testing-next.html');const draftMedia=Object.fromEntries(await Promise.all(['attention','choices','leadership','meaning'].map(async(name)=>['weekly-'+name+'.webp',(await readFile(path.join(root,'public/weekly-ideas/'+name+'.webp'))).toString('base64')])));
-const testingEditionBooks=JSON.parse(await read('src/encrypted-testing-editions.json'));
+const testingEditionBooks=await editionRecords('src/encrypted-testing-editions.json');
 for(const file of await readdir(path.join(root,'public/editorial-media')))draftMedia[file]=(await readFile(path.join(root,'public/editorial-media',file))).toString('base64');
 const assets={artworkLoading:await read('public/artwork-loading.js'),sessionsDashboard:await read('public/sessions-dashboard.html'),visitsDashboard:await read('public/visits-dashboard.html'),visitsTracking:await read('public/visits-tracking.js'),testingEditionBooks,publishedMedia,socialMirrorPublished,socialMirror:await read('public/social-mirror-shell.html'),liveDraft:await read('public/published-storefront.html'),publishedDraft:true,testingDraft,draftMedia,previewMedia:JSON.parse(await read('src/encrypted-preview-media.json')),completedBooks:{...previewBooks,...publishedEditions},testing:JSON.parse(await read('src/encrypted-preview.json')),analytics:await read('public/analytics.js'),logo:await read('public/oportals-mark.svg'),home:await read('public/index.html'),sample:(await readFile(path.join(root,'public/Life-Secrets-Sample.pdf'))).toString('base64'),book:JSON.parse(await read('src/encrypted-book.json'))};
 // Production and Testing have separate snapshots but can contain identical
