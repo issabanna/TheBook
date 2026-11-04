@@ -78,6 +78,13 @@
       "when": 1793696400000,
       "tag": "0010_session_stats_exclusions",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793816585000,
+      "tag": "0011_conversion_funnel",
+      "breakpoints": true
     }
   ]
 }

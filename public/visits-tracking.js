@@ -13,7 +13,7 @@
   'close-paid':'mirror_paid_close','close-book-review':'preview_close','pause-examples':'mirror_pause_examples'
  };
  function allowed(){
-  if(window.OPORTALS_OWNER){clearSession();return false;}
+  if(window.OPORTALS_OWNER||(typeof navigator!=='undefined'&&(navigator.webdriver||/bot|spider|crawler|headless|lighthouse|pagespeed/i.test(navigator.userAgent||'')))){clearSession();return false;}
   try{
    if(localStorage.getItem('oportals-testing-measurement')==='deny'){clearSession();return false;}
    const p=JSON.parse(localStorage.getItem('oportals-analytics-consent-v1'));
@@ -23,7 +23,7 @@
  }
  function page(){
   let p=location.pathname.replace(/^\/Testing(?=\/|$)/,'')||'/';p=p.replace(/\/$/,'')||'/';
-  if(['/','/ideas','/SocialMirror'].includes(p))return p;
+  if(['/','/ideas','/SocialMirror'].includes(p)||/^\/ideas\/(attention|choices|leadership|meaning)$/.test(p))return p;
   if(/^\/info\/(about|contact|privacy|terms|refunds)$/.test(p))return p;
   if(p.startsWith('/book/')&&slugs.includes(p.slice(6)))return p;
   return null;

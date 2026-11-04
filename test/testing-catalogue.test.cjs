@@ -17,7 +17,7 @@ const run=s=>vm.runInContext(s,ctx),visible=()=>[...document.querySelectorAll('#
 assert.equal(document.querySelector('#free-book'),null);
 assert.equal(document.querySelector('.book-filters [data-filter="free"]'),null);
 assert.equal(document.querySelector('.header a[href$="#free-book"]'),null);
-assert.equal(document.querySelectorAll('.hero .hero-actions a').length,1);
+assert.equal(document.querySelectorAll('.hero .hero-actions a').length,2);
 assert.equal(document.querySelector('#faq').textContent.includes('SneakPeak Ideas'),false);
 assert.equal(document.querySelector('#bookshelf a[href$="/book/sneakpeak-ideas"]'),null);
 assert.equal(document.querySelectorAll('#editorial-feature').length,1);

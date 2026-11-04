@@ -1,5 +1,5 @@
 const SEO_ORIGIN='https://oportals.com';
-const SEO_ROBOTS='User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /Testing\nDisallow: /testing\nDisallow: /Visits\nDisallow: /visits\nDisallow: /Sessions\nDisallow: /sessions\nDisallow: /download\nDisallow: /downloads\nDisallow: /metrics\nDisallow: /leads\nDisallow: /contact-inbox\nDisallow: /checkout\nDisallow: /paypal/\nDisallow: /api/\nDisallow: /SocialMirror?ref=\nDisallow: /SocialMirror?manage=\nDisallow: /SocialMirror?payment=\nSitemap: https://oportals.com/sitemap.xml\n';
+const SEO_ROBOTS='User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /Testing\nDisallow: /testing\nDisallow: /Visits\nDisallow: /visits\nDisallow: /Conversions\nDisallow: /Sessions\nDisallow: /sessions\nDisallow: /download\nDisallow: /downloads\nDisallow: /metrics\nDisallow: /leads\nDisallow: /contact-inbox\nDisallow: /checkout\nDisallow: /paypal/\nDisallow: /api/\nDisallow: /SocialMirror?ref=\nDisallow: /SocialMirror?manage=\nDisallow: /SocialMirror?payment=\nSitemap: https://oportals.com/sitemap.xml\n';
 function seoEscape(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function seoJson(value){return JSON.stringify(value).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');}
 function seoFragment(html,id,value){const regex=new RegExp('(<([a-z]+)\\b[^>]*\\bid="'+id+'"[^>]*>)\\s*(<\\/\\2>)','i');return html.replace(regex,(_m,start,_tag,end)=>start+value+end);}
@@ -18,7 +18,7 @@ function applyPageSeo(html,meta,{testing=false,privateLink=false,client=null}={}
  for(const [id,value] of Object.entries(meta.fragments||{}))body=seoFragment(body,id,value);
  if(meta.view==='book'||meta.view==='info'||meta.view==='ideas'){
   body=seoVisibility(body,'home-content',false);body=body.replace(/<section class="hero\b([^>]*)>/,'<section class="hero$1 hidden>');
-  if(meta.view==='book'){body=seoVisibility(body,'book-detail',true);body=body.replace('<dialog id="book-review"','<dialog id="book-review" open data-prerendered');}
+  if(meta.view==='book'){body=seoVisibility(body,'book-detail',true);body=seoVisibility(body,'book-review',true);}
   if(meta.view==='info')body=seoVisibility(body,'info-view',true);
   if(meta.view==='ideas'){body=seoVisibility(body,'ideas-view',true);body=body.replace(/(<h1\b[^>]*id="journal-title"[^>]*>)[\s\S]*?(<\/h1>)/,(_m,a,b)=>a+seoEscape(meta.heading)+b);}
  }

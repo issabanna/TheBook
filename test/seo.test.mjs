@@ -20,7 +20,7 @@ test('all 29 public pages have unique server-delivered metadata, canonical URLs 
   assert.equal(document.querySelector('meta[property="og:url"]').content,origin+path);assert.equal(document.querySelector('meta[name="twitter:card"]').content,'summary_large_image');
   assert.ok(existsSync('public/published-editorial-media/'+meta.image.split('/').pop()),path);
   if(meta.view==='book'){
-   assert.equal(document.querySelector('#book-detail h1').textContent,data['@graph'][1].name);assert.ok(document.querySelector('#book-review[open][data-prerendered]'));assert.ok(document.querySelector('#home-content[hidden]'));assert.ok(document.querySelector('#book-detail a[data-purchase]'));
+   assert.equal(document.querySelector('#book-detail h1').textContent,data['@graph'][1].name);assert.ok(document.querySelector('section#book-review:not([hidden])'));assert.ok(document.querySelector('#home-content[hidden]'));assert.ok(document.querySelector('#book-detail a[data-purchase]'));
    const offer=data['@graph'][1].offers;assert.equal(offer.priceCurrency,'USD');assert.equal(offer.availability,'https://schema.org/InStock');assert.ok(['7.99','8.99','9.99'].includes(offer.price));assert.equal(document.querySelectorAll('#book-detail .actual-page-grid img').length,3);
   }
   if(meta.view==='ideas'){assert.ok(document.querySelector('#ideas-view:not([hidden])'));assert.ok(document.querySelector('#weekly-content article'));}
@@ -37,7 +37,7 @@ test('sitemap contains only public canonical URLs; Testing and personal Mirror l
  const head=await handler(new Request(origin+'/book/life-secrets',{method:'HEAD'}),env);assert.equal(head.status,200);assert.ok(!head.headers.get('X-Robots-Tag')?.includes('noindex'));assert.equal(await head.text(),'');
  const redirect=await request('/book/life-secrets/');assert.equal(redirect.status,308);assert.equal(redirect.headers.get('Location'),origin+'/book/life-secrets');assert.equal((await request('/ideas/unknown')).status,404);
 });
-test('prerendered book pages hydrate into the existing modal and journal navigation updates metadata',async()=>{
+test('prerendered book landing pages stay inline and journal navigation updates metadata',async()=>{
  const html=await(await request('/book/art-of-attention')).text(),{window,document}=parseHTML(html);let current=new URL(origin+'/book/art-of-attention'),modalCalls=0;
  Object.defineProperty(window.HTMLElement.prototype,'open',{get(){return this.hasAttribute('open')},set(v){v?this.setAttribute('open',''):this.removeAttribute('open')},configurable:true});
  window.HTMLElement.prototype.showModal=function(){assert.ok(!this.open,'An already-open non-modal dialog cannot use showModal');modalCalls++;this.open=true;};window.HTMLElement.prototype.close=function(){this.open=false};
@@ -47,9 +47,9 @@ test('prerendered book pages hydrate into the existing modal and journal navigat
  const storage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}},ctx=vm.createContext({window,document,location,history,URL,URLSearchParams,console,localStorage:storage,sessionStorage:storage,fetch:async()=>({ok:false}),setTimeout,clearTimeout,requestAnimationFrame:()=>0,cancelAnimationFrame:()=>{}});
  for(const script of document.querySelectorAll('script'))if(!script.src&&!['application/json','application/ld+json'].includes(script.type))vm.runInContext(script.textContent,ctx,{timeout:5000});
  vm.runInContext(readFileSync('public/seo-navigation.js','utf8'),ctx);
- assert.equal(modalCalls,1);assert.ok(document.querySelector('#book-review').open);assert.equal(document.title,seo.pages['/book/art-of-attention'].title);
+ assert.equal(modalCalls,0);assert.equal(document.querySelector('#book-review').hidden,false);assert.equal(document.title,seo.pages['/book/art-of-attention'].title);
  for(const topic of ['choices','leadership','meaning','attention']){
-  history.pushState({},'','/ideas/'+topic);vm.runInContext('routeView()',ctx);assert.equal(document.title,seo.pages['/ideas/'+topic].title);assert.equal(document.querySelector('#weekly-content h3').textContent,seo.pages['/ideas/'+topic].heading);assert.ok(!document.querySelector('#book-review').open);
+  history.pushState({},'','/ideas/'+topic);vm.runInContext('routeView()',ctx);assert.equal(document.title,seo.pages['/ideas/'+topic].title);assert.equal(document.querySelector('#weekly-content h3').textContent,seo.pages['/ideas/'+topic].heading);assert.ok(document.querySelector('#book-review').hidden);
  }
  history.pushState({},'','/');vm.runInContext('routeView()',ctx);assert.equal(document.title,seo.pages['/'].title);assert.equal(document.querySelector('meta[property="og:url"]').content,origin+'/');
 });

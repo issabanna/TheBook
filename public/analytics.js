@@ -1,73 +1,82 @@
 (() => {
-  'use strict';
-  const ID = 'G-H7Z99E31L4';
-  const KEY = 'oportals-analytics-consent-v1';
-  const MAX_AGE = 180 * 86400000;
-  let enabled = false, loaded = false;
-  const banner = document.getElementById('analytics-consent');
-  function preference() {
-    try { const p = JSON.parse(localStorage.getItem(KEY)); return p && Date.now() - p.at < MAX_AGE && ['accepted', 'rejected'].includes(p.choice) ? p.choice : null; } catch { return null; }
+ 'use strict';
+ if(window.__oportalsCommerceLoaded)return;window.__oportalsCommerceLoaded=true;
+ const ID='G-H7Z99E31L4',KEY='oportals-analytics-consent-v1',MAX_AGE=180*86400000;
+ let enabled=false,loaded=false,lastPage=null,memorySession=null;const sentPurchases=new Set();
+ const banner=document.getElementById('analytics-consent');
+ let products={};try{products=JSON.parse(document.getElementById('cro-products')?.textContent||'{}');}catch{}
+ const current=()=>new URL(location.href),testing=()=>/^\/Testing(?:\/|$)/.test(current().pathname);
+ const path=()=>current().pathname.replace(/^\/Testing(?=\/|$)/,'').replace(/\/$/,'')||'/';
+ const privateMirror=()=>path()==='/SocialMirror'&&(current().search||current().hash);
+ function preference(){try{const p=JSON.parse(localStorage.getItem(KEY));return p&&Date.now()-p.at<MAX_AGE&&['accepted','rejected'].includes(p.choice)?p.choice:null;}catch{return null;}}
+ function save(choice){try{localStorage.setItem(KEY,JSON.stringify({choice,at:Date.now()}));}catch{}}
+ function cleanLocation(){const u=current(),safe=new URL(u.origin+u.pathname);for(const key of ['utm_source','utm_medium','utm_campaign','utm_content','utm_term']){const value=u.searchParams.get(key);if(value&&/^[A-Za-z0-9_. -]{1,150}$/.test(value))safe.searchParams.set(key,value);}return safe.href;}
+ function cleanReferrer(){if(path()==='/paypal/return')return '';try{const r=new URL(document.referrer);return r.origin+r.pathname;}catch{return '';}}
+ function allowed(){if(window.OPORTALS_OWNER||privateMirror()||(typeof navigator!=='undefined'&&(navigator.webdriver||/bot|spider|crawler|headless|lighthouse|pagespeed/i.test(navigator.userAgent||''))))return false;try{if(localStorage.getItem('oportals-testing-measurement')==='deny')return false;}catch{}return preference()!=='rejected';}
+ function source(){const s=(current().searchParams.get('utm_source')||'').toLowerCase();if(['instagram','ig'].includes(s))return 'instagram';if(['facebook','fb'].includes(s))return 'facebook';if(['google','bing','search'].includes(s))return s==='google'?'google':'search';if(['email','newsletter'].includes(s))return 'email';if(['whatsapp','wa'].includes(s))return 'whatsapp';if(s)return 'campaign';try{const h=new URL(document.referrer).hostname.toLowerCase();if(h===current().hostname||h==='oportals.com'||h.endsWith('.oportals.com'))return 'internal';if(h==='instagram.com'||h.endsWith('.instagram.com'))return 'instagram';if(h==='facebook.com'||h.endsWith('.facebook.com'))return 'facebook';if(h==='google.com'||h.endsWith('.google.com'))return 'google';if(h.includes('bing.com')||h.includes('duckduckgo.com'))return 'search';return 'other';}catch{return current().searchParams.has('fbclid')?'campaign':'direct';}}
+ function uuid(){try{if(crypto.randomUUID)return crypto.randomUUID();const a=crypto.getRandomValues(new Uint8Array(16));a[6]=(a[6]&15)|64;a[8]=(a[8]&63)|128;const h=[...a].map(x=>x.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);}catch{return null;}}
+ function session(){let saved;try{saved=JSON.parse(sessionStorage.getItem('oportals-visit-session-'+(testing()?'testing':'live'))||'null');}catch{}if(saved?.id&&Date.now()-saved.last<1800000)return {id:saved.id,source:saved.source};if(!memorySession)memorySession={id:uuid(),source:source()};return memorySession;}
+ function firstParty(event,book=''){
+  if(!enabled||!allowed()||typeof fetch!=='function'||path()==='/paypal/return')return;
+  const s=session(),id=uuid();if(!id||!s?.id)return;
+  fetch((testing()?'/Testing':'')+'/api/conversion-event',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({event,eventId:id,session:s.id,page:path(),book,source:s.source,consent:true})}).catch(()=>{});
+ }
+ function ga(event,data){if(enabled&&allowed()&&loaded&&!testing()&&window.gtag)window.gtag('event',event,data);}
+ function item(book){const b=products[book];return b?{item_id:book,item_name:b.title,price:Number(b.price),quantity:1}:null;}
+ function ecommerce(event,book){const product=item(book);if(!product)return;firstParty(event,book);ga(event,{currency:'USD',value:product.price,items:[product]});}
+ function trackPage(){
+  if(!enabled||!allowed())return;const p=path();if(p===lastPage)return;lastPage=p;
+  ga('page_view',{page_location:cleanLocation(),page_referrer:cleanReferrer(),page_title:document.title});
+  const book=p.startsWith('/book/')?p.slice(6):'';
+  firstParty('page_view',products[book]?book:'');if(products[book])ecommerce('view_item',book);
+  if(p==='/checkout'){
+   const selected=current().searchParams.get('book')||'life-secrets';let recent=false;
+   try{const prior=JSON.parse(sessionStorage.getItem('oportals-checkout-measurement')||'null');recent=prior?.book===selected&&Date.now()-prior.at<20000;}catch{}
+   if(!recent)ecommerce('begin_checkout',selected);
   }
-  function save(choice) { try { localStorage.setItem(KEY, JSON.stringify({ choice, at: Date.now() })); } catch {} }
-  function cleanLocation() {
-    const url = new URL(location.href), safe = new URL(url.origin + url.pathname);
-    for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
-      const value = url.searchParams.get(key); if (value) safe.searchParams.set(key, value.slice(0, 150));
-    }
-    return safe.href;
-  }
-  function cleanReferrer() { try { const r = new URL(document.referrer); return r.origin + r.pathname; } catch { return ''; } }
-  function enable(withCookies = true) {
-    enabled = true;
-    window['ga-disable-' + ID] = false;
-    if (loaded) { if (withCookies) window.gtag('consent', 'update', { analytics_storage: 'granted' }); return; }
-    loaded = true;
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function () { window.dataLayer.push(arguments); };
-    window.gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
-    if (withCookies) window.gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
-    window.gtag('js', new Date());
-    window.gtag('config', ID, { send_page_view: false, allow_google_signals: false, allow_ad_personalization_signals: false, page_location: cleanLocation(), page_referrer: cleanReferrer() });
-    window.gtag('event', 'page_view', { page_location: cleanLocation(), page_referrer: cleanReferrer(), page_title: document.title });
-    const script = document.createElement('script'); script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + ID;
-    document.head.appendChild(script);
-  }
-  function clearCookies() {
-    const domains = ['', location.hostname, '.' + location.hostname];
-    for (const part of document.cookie.split(';')) {
-      const name = part.trim().split('=')[0];
-      if (/^_ga(?:_|$)/.test(name)) for (const domain of domains) document.cookie = name + '=; Max-Age=0; Path=/; SameSite=Lax; Secure' + (domain ? '; Domain=' + domain : '');
-    }
-  }
-  function choose(choice) {
-    save(choice); if (banner) banner.hidden = true;
-    if (choice === 'accepted') enable(true);
-    else {
-      enabled = false; window['ga-disable-' + ID] = true; clearCookies();
-      // A reload unloads an already-running Google script after consent is withdrawn.
-      if (loaded) location.reload();
-    }
-  }
-  document.getElementById('measurement-accept')?.addEventListener('click', () => choose('accepted'));
-  document.getElementById('measurement-reject')?.addEventListener('click', () => choose('rejected'));
-  let bookMeasurementOff=false;try{bookMeasurementOff=localStorage.getItem('oportals-testing-measurement')==='deny'}catch{}
-  const stored = bookMeasurementOff ? 'rejected' : preference();
-  if (stored === 'accepted') enable(true);
-  else if (stored === 'rejected') { window['ga-disable-' + ID] = true; clearCookies(); }
-  else enable(true);
-  if (banner) banner.hidden = true;
-  document.getElementById('analytics-accept')?.addEventListener('click', () => choose('accepted'));
-  document.getElementById('analytics-reject')?.addEventListener('click', () => choose('rejected'));
-  document.getElementById('analytics-settings')?.addEventListener('click', () => { if (banner) { banner.hidden = false; document.getElementById('analytics-reject')?.focus(); } });
-  document.querySelectorAll('a[href="/checkout"]').forEach(link => link.addEventListener('click', event => {
-    if (!enabled || !window.gtag || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
-    event.preventDefault(); let navigated = false;
-    const navigate = () => { if (!navigated) { navigated = true; location.assign('/checkout'); } };
-    window.gtag('event', 'begin_checkout', { cta_location: link.dataset?.cta || 'unspecified', currency: 'USD', value: 15, items: [{ item_id: 'LIFE-SECRETS', item_name: 'Life Secrets', price: 15, quantity: 1 }], event_callback: navigate, event_timeout: 400 });
-    setTimeout(navigate, 450);
-  }));
-  document.querySelectorAll('a[href="Life-Secrets-Sample.pdf"]').forEach(link => link.addEventListener('click', () => {
-    if (enabled && window.gtag) window.gtag('event', 'sample_preview', { item_id: 'LIFE-SECRETS' });
-  }));
+ }
+ window.oportalsTrackPage=trackPage;
+ window.oportalsTrackPurchase=purchase=>{
+  if(!purchase?.eligible||!enabled||!allowed()||testing()||!loaded||!/^OP-[a-f0-9]{24}$/.test(purchase.transaction_id)||purchase.currency!=='USD'||!Number.isFinite(purchase.value)||purchase.value<=0||!Array.isArray(purchase.items)||purchase.items.length!==1||!products[purchase.items[0].item_id])return;
+  const key='oportals-purchase-measured-'+purchase.transaction_id;if(sentPurchases.has(key))return;try{if(localStorage.getItem(key))return;}catch{}
+  // The response is issued only after server verification. A stable opaque
+  // transaction_id provides GA4's transaction deduplication across receipts.
+  ga('purchase',{transaction_id:purchase.transaction_id,currency:purchase.currency,value:purchase.value,items:purchase.items});sentPurchases.add(key);try{localStorage.setItem(key,String(Date.now()));}catch{}
+ };
+ function enable(withCookies=true){
+  enabled=true;if(!allowed())return;
+  if(testing()){trackPage();return;}
+  window['ga-disable-'+ID]=false;
+  if(!loaded){
+   loaded=true;window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments);};
+   window.gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});
+   if(withCookies)window.gtag('consent','update',{analytics_storage:'granted',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});
+   window.gtag('js',new Date());window.gtag('config',ID,{send_page_view:false,allow_google_signals:false,allow_ad_personalization_signals:false,page_location:cleanLocation(),page_referrer:cleanReferrer(),ignore_referrer:path()==='/paypal/return'});
+   const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id='+ID;document.head.appendChild(script);
+  }else if(withCookies)window.gtag('consent','update',{analytics_storage:'granted'});
+  trackPage();if(window.OPORTALS_VERIFIED_PURCHASE)window.oportalsTrackPurchase(window.OPORTALS_VERIFIED_PURCHASE);
+ }
+ function clearCookies(){const domains=['',location.hostname,'.'+location.hostname];for(const part of (document.cookie||'').split(';')){const name=part.trim().split('=')[0];if(/^_ga(?:_|$)/.test(name))for(const domain of domains)document.cookie=name+'=; Max-Age=0; Path=/; SameSite=Lax; Secure'+(domain?'; Domain='+domain:'');}}
+ function removeAttribution(){if(typeof fetch==='function')fetch((testing()?'/Testing':'')+'/api/conversion-event',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},body:'{"consent":false}'}).catch(()=>{});}
+ function choose(choice){
+  save(choice);if(banner)banner.hidden=true;
+  if(choice==='accepted'){try{if(localStorage.getItem('oportals-testing-measurement')==='deny')localStorage.setItem('oportals-testing-measurement','allow');}catch{}lastPage=null;enable(true);}else{enabled=false;window['ga-disable-'+ID]=true;clearCookies();removeAttribution();if(loaded)location.reload();}
+ }
+ for(const id of ['measurement-accept','analytics-accept'])document.getElementById(id)?.addEventListener('click',()=>choose('accepted'));
+ for(const id of ['measurement-reject','analytics-reject'])document.getElementById(id)?.addEventListener('click',()=>choose('rejected'));
+ document.getElementById('analytics-settings')?.addEventListener('click',()=>{if(banner){banner.hidden=false;document.getElementById('analytics-reject')?.focus();}});
+ let bookOff=false;try{bookOff=localStorage.getItem('oportals-testing-measurement')==='deny';}catch{}
+ if(bookOff||preference()==='rejected'){window['ga-disable-'+ID]=true;clearCookies();removeAttribution();}else enable(true);
+ if(banner)banner.hidden=true;
+ if(typeof history!=='undefined')for(const name of ['pushState','replaceState']){const original=history[name];if(typeof original==='function')history[name]=function(...args){const result=original.apply(this,args);Promise.resolve().then(trackPage);return result;};}
+ window.addEventListener?.('popstate',()=>Promise.resolve().then(trackPage));
+ document.addEventListener?.('click',event=>{
+  const el=event.target.closest?.('a,button');if(!el||!enabled||!allowed())return;
+  const preview=el.dataset?.sample;if(products[preview]){ecommerce('preview_opened',preview);return;}
+  let url;try{url=new URL(el.getAttribute('href')||'',current().origin);}catch{return;}
+  if(url.origin!==current().origin)return;
+  const p=url.pathname.replace(/^\/Testing(?=\/|$)/,''),selected=el.dataset?.purchase||(p==='/checkout'?url.searchParams.get('book')||'life-secrets':null);
+  if(products[selected]){ecommerce('begin_checkout',selected);try{sessionStorage.setItem('oportals-checkout-measurement',JSON.stringify({book:selected,at:Date.now()}));}catch{}return;}
+  const match=p.match(/^\/book\/([a-z0-9-]+)$/);if(match&&products[match[1]])ecommerce('select_item',match[1]);
+ },{capture:true,passive:true});
 })();
