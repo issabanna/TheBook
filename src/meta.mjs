@@ -140,3 +140,29 @@ export async function metaTrackingStatus(env){
  const configuration={pixelId:META_PIXEL_ID,enabled:metaEnabled(env),tokenConfigured:!!env.META_CAPI_ACCESS_TOKEN,testMode:env.META_TEST_MODE==='true',testCodeConfigured:!!env.META_TEST_EVENT_CODE,purchasesFrom:env.META_PURCHASES_FROM||null,purchaseActivationConfigured:Number.isFinite(Date.parse(env.META_PURCHASES_FROM||''))};
  try{const rows=(await env.DB.prepare('SELECT mode,state,last_error_code,COUNT(*) AS count FROM meta_purchase_outbox GROUP BY mode,state,last_error_code').all()).results;return {...configuration,deliveries:rows};}catch{return {...configuration,deliveries:[],storageReady:false};}
 }
+// An owner-requested connectivity probe. This deliberately cannot represent a
+// purchase, alter the sales ledger or enable test mode for live customers.
+export async function metaConnectionTest(request,env,{fetcher=fetch}={}){
+ if(!await visitsOwner(request,env))return metaJson({error:'Owner access required.'},401);
+ if(request.method!=='POST')return metaJson({error:'Method not allowed.'},405);
+ if(request.headers.get('origin')!==new URL(request.url).origin)return metaJson({error:'Origin not allowed.'},403);
+ if(!request.headers.get('content-type')?.startsWith('application/json'))return metaJson({error:'Use JSON.'},415);
+ if(!env.META_CAPI_ACCESS_TOKEN)return metaJson({error:'The server access token is not configured.',tokenConfigured:false},503);
+ try{
+  const reader=request.body?.getReader();if(!reader)return metaJson({error:'Invalid test request.'},400);let size=0;const chunks=[];
+  while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>512){await reader.cancel();return metaJson({error:'Test request too large.'},413);}chunks.push(value);}
+  const bytes=new Uint8Array(size);let offset=0;for(const p of chunks){bytes.set(p,offset);offset+=p.length;}
+  let data;try{data=JSON.parse(new TextDecoder().decode(bytes));}catch{return metaJson({error:'Invalid test request.'},400);}
+  if(!data||data.testCode!=='TEST10333'||!metaUuid(data.eventId)||Object.keys(data).some(k=>!['testCode','eventId'].includes(k)))return metaJson({error:'Provide the approved test code and a unique test identifier.'},400);
+  if(!env.DB)return metaJson({error:'Test rate limiting is unavailable.'},503);
+  const windowStart=Math.floor(Date.now()/900000)*900,rate=(await env.DB.prepare('INSERT INTO contact_limits(limit_key,window_start,request_count) VALUES(?,?,1) ON CONFLICT(limit_key,window_start) DO UPDATE SET request_count=request_count+1 RETURNING request_count').bind('meta-connection-test',windowStart).all()).results[0];
+  if(rate.request_count>10)return metaJson({error:'Test request limit reached. Try again in 15 minutes.'},429);
+  const eventId='OP-CONNECTION-'+data.eventId,event={event_name:'OPortalsConnectionTest',event_time:Math.floor(Date.now()/1000),event_id:eventId,action_source:'website',event_source_url:'https://oportals.com/',user_data:{external_id:[await metaHash('oportals-connection-test:'+data.eventId)]}};
+  const response=await fetcher('https://graph.facebook.com/v26.0/'+META_PIXEL_ID+'/events',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+env.META_CAPI_ACCESS_TOKEN},body:JSON.stringify({data:[event],test_event_code:data.testCode}),signal:AbortSignal.timeout(10000)});
+  let result;try{result=await response.json();}catch{result={};}
+  const trace=result?.fbtrace_id||result?.error?.fbtrace_id,traceId=typeof trace==='string'&&/^[A-Za-z0-9_-]{1,160}$/.test(trace)?trace:null;
+  const accepted=response.ok&&result.events_received===1,code=Number.isInteger(result?.error?.code)?result.error.code:null,subcode=Number.isInteger(result?.error?.error_subcode)?result.error.error_subcode:null;
+  const explanation=accepted?null:code===190?'Meta rejected the access token.':code===10||code===200?'Meta denied access to this dataset.':'Meta did not accept the test event.';
+  return metaJson({accepted,pixelId:META_PIXEL_ID,eventName:event.event_name,eventId,testCode:data.testCode,eventsReceived:Number.isInteger(result.events_received)?result.events_received:0,metaHttpStatus:response.status,traceId,...(!accepted?{error:explanation,metaErrorCode:code,metaErrorSubcode:subcode}:{}),purchaseEvent:false,financialRecordsChanged:false},accepted?200:502);
+ }catch{return metaJson({accepted:false,error:'Meta test delivery is temporarily unavailable.',purchaseEvent:false},502);}
+}

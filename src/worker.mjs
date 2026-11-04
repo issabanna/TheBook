@@ -1,5 +1,5 @@
 import {recordConversionEvent,recordVerifiedPurchase,recordVerifiedRefund,recordCheckoutAttribution,conversionReport} from './conversions.mjs';
-import {metaPublicConfig,metaConsent,recordMetaCheckout,recordMetaPurchase,deliverMetaPurchases,metaTrackingStatus} from './meta.mjs';
+import {metaPublicConfig,metaConsent,recordMetaCheckout,recordMetaPurchase,deliverMetaPurchases,metaTrackingStatus,metaConnectionTest} from './meta.mjs';
 import {SEO_ORIGIN,SEO_ROBOTS,applyPageSeo,seoSitemap} from './seo.mjs';
 import {usesSharedBookCheckout,sharedBookCheckoutEnabled,isNewSharedBookPayment,createBookOrder,bookPaymentAllocation,resolveBookPayment,sharedBookCheckoutPage,sharedBookRedirectPage} from './book-checkout.mjs';
 import {testingOnlyBooks,testingOnlyBookSlugs} from './testing-catalogue.mjs';
@@ -116,8 +116,9 @@ export function createHandler(assets, fetcher = fetch) {
     if(response.status===200&&ctx?.waitUntil)ctx.waitUntil(deliverMetaPurchases(env,{fetcher,limit:3}).catch(()=>{}));
     return response;
    }
-   if(['/Conversions/meta','/Conversions/meta/retry','/Testing/Conversions/meta','/Testing/Conversions/meta/retry'].includes(path)){
+   if(['/Conversions/meta','/Conversions/meta/retry','/Conversions/meta/test','/Testing/Conversions/meta','/Testing/Conversions/meta/retry','/Testing/Conversions/meta/test'].includes(path)){
     if(!await visitsOwner(request,env))return json({error:'Sign in to open this owner report.'},401);
+    if(path.endsWith('/test'))return metaConnectionTest(request,env,{fetcher});
     if(path.endsWith('/retry')){
      if(request.method!=='POST'||request.headers.get('origin')!==url.origin)return json({error:'Origin or method not allowed.'},403);
      await deliverMetaPurchases(env,{fetcher});
