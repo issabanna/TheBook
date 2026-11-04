@@ -8,14 +8,14 @@ const require=createRequire(import.meta.url);
 const {parseHTML}=require('linkedom');
 
 test('failed artwork retries twice, offers manual recovery outside links and clears on success',()=>{
- const {window,document}=parseHTML('<html><body><a href="/books/sample.pdf"><img src="/media/cover.webp" alt="Book cover"></a></body></html>');
+ const {window,document}=parseHTML('<html><body><a href="/books/sample.pdf"><img src="/media/cover.webp" srcset="/media/cover.webp 320w, /media/cover-large.webp 640w" alt="Book cover"></a></body></html>');
  const timers=new Map();let next=0;const listeners={};
  // Linkedom does not propagate image resource events through the capture phase.
  document.addEventListener=(type,fn)=>{listeners[type]=fn;};
  const context={window,document,HTMLImageElement:window.HTMLImageElement,URL,location:new URL('https://oportals.com/'),Date,setTimeout:fn=>{timers.set(++next,fn);return next;},clearTimeout:id=>timers.delete(id)};
  vm.runInNewContext(readFileSync('public/artwork-loading.js','utf8'),context);
  const image=document.querySelector('img'),fail=()=>listeners.error({target:image}),tick=()=>{const [id,fn]=timers.entries().next().value;timers.delete(id);fn();};
- fail();fail();assert.equal(timers.size,1);tick();assert.match(image.src,/artwork-retry=/);
+ fail();fail();assert.equal(timers.size,1);tick();assert.match(image.src,/artwork-retry=/);assert.equal(image.hasAttribute('srcset'),false,'The failed responsive candidate must not override the retry URL');
  fail();tick();fail();assert.equal(timers.size,0);
  const button=document.querySelector('.artwork-reload');assert.ok(button);assert.equal(button.closest('a'),null);
  fail();assert.equal(document.querySelectorAll('.artwork-reload').length,1);

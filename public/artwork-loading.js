@@ -24,6 +24,9 @@
     const url = new URL(state.source, location.href);
     url.searchParams.set('artwork-retry', String(Date.now()) + '-' + state.attempts);
     state.current = url.pathname + url.search;
+    // A failed srcset candidate would otherwise keep overriding the retry src.
+    // Fall back to the small default image for this recovery attempt.
+    image.removeAttribute('srcset');
     image.setAttribute('src', state.current);
   }
   function failed(image) {

@@ -34,6 +34,15 @@ function withArtworkRecovery(body, source) {
  return body.replace('</head>','<script src="/artwork-loading.js?v=1" defer></script></head>');
 }
 function htmlResponse(body, status = 200) { return new Response(body, { status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' } }); }
+function staticArtworkResponse(request,data,version,{publicAsset=false}={}){
+ const url=new URL(request.url),immutable=publicAsset&&version?.version&&url.searchParams.get('v')===version.version;
+ const cache=publicAsset?(immutable?'public, max-age=31536000, immutable':'public, max-age=3600, stale-while-revalidate=86400'):'private, max-age=300';
+ const imageHeaders={...headers,'Content-Type':'image/webp','Cache-Control':url.searchParams.has('artwork-retry')?'no-store':cache,'X-Robots-Tag':publicAsset?'index, follow, max-image-preview:large':'noindex, nofollow'};
+ if(version?.etag)imageHeaders.ETag=version.etag;
+ const matches=(request.headers.get('If-None-Match')||'').split(',').some(v=>v.trim()==='*'||version?.etag&&v.trim().replace(/^W\//,'')===version.etag);
+ if(matches)return new Response(null,{status:304,headers:imageHeaders});
+ return new Response(request.method==='HEAD'?null:fromBase64(data),{headers:imageHeaders});
+}
 const pageStyle = `body{background:white;color:#243944;font:16px/1.6 Arial,sans-serif;max-width:680px;margin:6vh auto;padding:25px}h1{font:700 36px/1.15 Arial,sans-serif}a,button{display:inline-block;background:#d4e9ee;color:#193b4d;padding:14px 22px;border:0;border-radius:4px;text-decoration:none;cursor:pointer;font:inherit}small{color:#68734b}input,select{box-sizing:border-box;padding:14px;width:100%;margin:12px 0;border:1px solid #aeb49b;background:#fffdf7;font:inherit}button{margin:10px 0}#download[hidden],form[hidden]{display:none}#message{white-space:pre-wrap}a.secondary{background:transparent;color:#262b21;padding:10px 0}`;
 function page(title, content) { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>${title} — O Portals</title><style>${pageStyle}</style></head><body><small>OPortals.com</small>${content}<p><a class="secondary" href="/">Back to the bookstore</a></p></body></html>`; }
 const receiptPage = page('Your book', `<h1>Your book, ready to keep.</h1><p id="message" role="status" aria-live="polite">Verifying your PayPal payment…</p><a id="download" hidden>Download your book ↓</a><form id="receipt" hidden><label for="transaction">PayPal transaction ID from your receipt</label><input id="transaction" name="transaction" maxlength="32" autocomplete="off" required pattern="[A-Za-z0-9]{8,32}"><button>Verify my purchase</button></form><form id="book-choice" hidden><label for="selected-book">Which book did you purchase?</label><select id="selected-book" required></select><button>Get my book ↓</button></form><p><small>Already paid? Verify the transaction ID on your PayPal receipt or contact us. You do not need to pay again to retry verification.</small></p><p class="receipt-support"><a href="/info/contact">Need help with your purchase?</a></p><p><small>Download links last 24 hours. Save the PDF to your device. Keep your PayPal receipt so you can verify your purchase again later.</small></p><script>
@@ -71,6 +80,15 @@ export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env, ctx) {
   const url=new URL(request.url);let path=url.pathname;const live=assets.testing?.liveStorefront===true&&(path==='/'||/^\/(?:book|books|media|info|checkout)\//.test(path)||path.startsWith('/ideas/')||['/ideas','/api/free-book','/leads','/leads.csv','/api/events','/api/contact','/api/contact/deliver','/api/contact/delete','/metrics','/downloads','/downloads.json','/contact-inbox'].includes(path));if(live)path='/Testing'+(path==='/'?'':path);
   try {
+   // Published artwork is already public. Do not route its thumbnails through
+   // private-preview key checks or per-visitor authentication/decryption.
+   if(url.pathname.startsWith('/media/')){
+    const name=url.pathname.slice('/media/'.length);
+    if(name.endsWith('.webp')&&Object.hasOwn(assets.publishedMedia||{},name)){
+     if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed.',{status:405,headers});
+     return staticArtworkResponse(request,assets.publishedMedia[name],assets.mediaVersions?.live?.[name],{publicAsset:true});
+    }
+   }
    const publicSeoPath=url.pathname.replace(/\/$/,'')||'/';
    if((request.method==='GET'||request.method==='HEAD')&&assets.seo?.live?.pages?.[publicSeoPath]&&((url.pathname!==publicSeoPath)||(url.hostname==='www.oportals.com'))){return new Response(null,{status:308,headers:{...headers,Location:SEO_ORIGIN+publicSeoPath+url.search}});}
    if(path.startsWith('/fonts/')){
@@ -179,7 +197,7 @@ export function createHandler(assets, fetcher = fetch) {
     }
     if(path.startsWith('/Testing/media/')){
      const publishedName=path.slice('/Testing/media/'.length);if(live&&Object.hasOwn(assets.publishedMedia||{},publishedName))return new Response(request.method==='HEAD'?null:fromBase64(assets.publishedMedia[publishedName]),{headers:{...privateHeaders,'X-Robots-Tag':'index, follow, max-image-preview:large','Content-Type':'image/webp'}});
-     const name=path.slice('/Testing/media/'.length);if((!live||assets.publishedDraft)&&Object.hasOwn(assets.draftMedia||{},name))return new Response(request.method==='HEAD'?null:fromBase64(assets.draftMedia[name]),{headers:{...privateHeaders,'Content-Type':'image/webp'}});const file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
+     const name=path.slice('/Testing/media/'.length);if((!live||assets.publishedDraft)&&Object.hasOwn(assets.draftMedia||{},name))return staticArtworkResponse(request,assets.draftMedia[name],assets.mediaVersions?.testing?.[name]);const file=Object.hasOwn(assets.previewMedia||{},name)?assets.previewMedia[name]:null;
      if(!file)return new Response('Image not found',{status:404,headers:privateHeaders});
      const key=['PREVIEW_CONTENT_KEY','PREVIEW_V3_KEY','PREVIEW_V4_KEY','PREVIEW_V5_KEY'].includes(file.keyEnv)?env[file.keyEnv]:null;
      if(!key)return new Response('Image unavailable',{status:503,headers:privateHeaders});

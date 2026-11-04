@@ -37,13 +37,14 @@ function bookTable(files){return '{'+Object.entries(files).map(([name,record])=>
 const testingBookTable=bookTable(assets.testingEditionBooks),publishedBookTable=bookTable(assets.completedBooks);
 delete assets.testingEditionBooks;delete assets.completedBooks;
 // Keep independent media snapshots while sharing identical immutable byte strings.
-const mediaAssetRecords=[],mediaIndex=new Map();
-function mediaTable(files){return '{'+Object.entries(files).map(([name,data])=>{
+const mediaAssetRecords=[],mediaIndex=new Map();assets.mediaVersions={live:{},testing:{}};
+function mediaTable(files,scope){return '{'+Object.entries(files).map(([name,data])=>{
+ const contentHash=createHash('sha256').update(Buffer.from(data,'base64')).digest('hex');assets.mediaVersions[scope][name]={version:contentHash.slice(0,20),etag:'"'+contentHash+'"'};
  const digest=createHash('sha256').update(data).digest('hex');
  if(!mediaIndex.has(digest)){mediaIndex.set(digest,mediaAssetRecords.length);mediaAssetRecords.push(data);}
  return JSON.stringify(name)+':mediaAssetRecords['+mediaIndex.get(digest)+']';
 }).join(',')+'}';}
-const testingMediaTable=mediaTable(assets.draftMedia),publishedMediaTable=mediaTable(assets.publishedMedia);
+const testingMediaTable=mediaTable(assets.draftMedia,'testing'),publishedMediaTable=mediaTable(assets.publishedMedia,'live');
 delete assets.draftMedia;delete assets.publishedMedia;
 const payment=(await read('src/payment.mjs')).replace(/^import .*from .*;\n/gm,'');
 const worker=(await read('src/worker.mjs')).replace(/^import .*from '\.\/(?:payment|testing-events|contact|free-book-leads|social-mirror|social-mirror-report|visits|sessions|admin-auth|testing-catalogue|book-checkout|seo|conversions|meta).mjs';\n/gm,'');
