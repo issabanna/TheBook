@@ -1,6 +1,6 @@
 # OPortals Meta purchase tracking — pre-production review
 
-Prepared 4 November 2026, Asia/Amman. **Not deployed. Production and Testing remain on version 179.**
+Prepared 4 November 2026, Asia/Amman. **Testing-only release. Public pages, checkout and delivery remain pinned to version 179. Meta is not activated for public traffic.**
 
 ## Existing assets and inspection
 
@@ -10,7 +10,7 @@ Prepared 4 November 2026, Asia/Amman. **Not deployed. Production and Testing rem
 - Inspected existing GA4 loader/SPA navigation, measurement controls, shared and dedicated PayPal checkout paths, PDT verification, independently verified IPNs, transaction allocation, receipt recovery, protected PDF delivery and the conversion ledger before editing.
 - Existing GA4 property: `G-H7Z99E31L4`.
 - Existing product configuration confirms **The Art of Attention: 32-page English digital PDF, $8.99 USD**. Other books retain their own configured identifiers/prices.
-- Hosting environment revision 29 had no Meta token or sandbox merchant configuration. No environment variables, production source branch, campaigns, budgets or social schedules were changed.
+- Hosting environment revision 29 had no Meta token or sandbox merchant configuration. No environment variables, campaigns, budgets or social schedules were changed. The Testing release preserves the approved public handler and public assets.
 
 ## Changes prepared
 
@@ -62,7 +62,7 @@ The prepared CSP adds only `https://connect.facebook.net` to script sources and 
 
 ## Verification completed
 
-**121 automated tests passed; none failed or skipped.** This includes 17 new Meta tests and all 104 existing regression tests.
+**124 automated tests passed; none failed or skipped.** This includes 17 Meta tests, three Testing-isolation tests and all 104 existing regression tests.
 
 | Scenario | Local result |
 | --- | --- |
@@ -139,4 +139,4 @@ Reference documentation: [Meta CAPI usage](https://developers.facebook.com/docs/
 
 Review branch: `meta-purchase-tracking-review`, based on production version 179 (`a1f34252bb4eb5d6d9eab210e88c8f587bace5f9`).
 
-No Sites deployment or environment mutation was performed. The current live version remains the rollback baseline. The proposed `0012_meta_purchase_tracking.sql` migration adds only tracking tables and indexes; book/payment allocation tables and encrypted PDF assets are unchanged. Before eventual publication, save the exact version-179 checkpoint and reviewed commit, configure the secret securely, finish the isolated external tests and obtain the owner's requested review.
+The owner authorized deployment to Testing only. The release dispatcher serves new code under `/Testing` and the exact approved version-179 handler for public requests, sharing unchanged immutable book/media assets. `/Testing/Meta` is an owner-only review/status page, and Testing script URLs remain namespaced. Testing is forced into isolated Meta test mode with TEST10333; browser dispatch stays disabled and genuine live payments cannot become test Purchase events. Existing live PayPal settings are preserved. The additive `0012_meta_purchase_tracking.sql` migration creates tracking tables/indexes only. No secret or environment mutation is part of this release. Before public activation, configure the secret securely, finish actual external testing, and explicitly promote the reviewed code instead of the frozen public handler. The native version-179 checkpoint remains available for rollback.

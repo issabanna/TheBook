@@ -1,0 +1,6 @@
+{
+  "commit": "a1f34252bb4eb5d6d9eab210e88c8f587bace5f9",
+  "versionNumber": 179,
+  "savedVersion": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_20f3f541f4b48191a34982a133ef8816",
+  "scope": "Meta review on /Testing only. Public requests use this frozen handler and public HTML/analytics. Shared immutable PDFs/media are unchanged."
+}
