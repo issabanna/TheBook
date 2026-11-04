@@ -1,0 +1,6 @@
+{
+  "commit": "bb54dc33a79ea851eb5bec8dccf2f826004fba1c",
+  "savedVersion": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_c9b25166c398819188289a23ce865a8f",
+  "versionNumber": 177,
+  "scope": "Before crawlable book and journal pages, sitemap, search/share metadata and cached WOFF2 font delivery. All book PDFs, prices, checkout, dashboards and homepage artwork preserved."
+}
