@@ -85,6 +85,13 @@
       "when": 1793816585000,
       "tag": "0011_conversion_funnel",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793819400000,
+      "tag": "0012_meta_purchase_tracking",
+      "breakpoints": true
     }
   ]
 }
