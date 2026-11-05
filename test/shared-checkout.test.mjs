@@ -26,6 +26,13 @@ test('each shared checkout keeps its selected book through verified payment and 
  }
  assert.equal(f.DB.sql.prepare('SELECT COUNT(*) AS n FROM book_payment_allocations').get().n,14);
 });
+test('renamed PayPal item keeps all 14 selected-book downloads working without the old item-name note',async()=>{
+ const f=await fixture();let n=0;
+ for(const [book,b] of Object.entries(BOOK_PRODUCTS).filter(([id,b])=>b.shared||id==='life-secrets')){
+  const page=await(await f.h(new Request(origin+'/checkout?book='+book),f.env)).text();assert.ok(!page.includes('PayPal may show'));assert.ok(page.includes(b.title));assert.ok(page.includes('$7.99 USD'));
+  const order=await start(f,book),tx='RENAMED'+String(++n).padStart(10,'0');f.payments.set(tx,paid(tx,{item_name:'OPortals book',item_number:''}));const response=await f.h(postVerify(tx,order.token,order.cookie),f.env);assert.equal(response.status,200,book);const result=await response.json();assert.equal(result.book,book);assert.equal(await(await f.h(new Request(origin+result.download),f.env)).text(),'PDF:'+book);assert.equal((await(await f.h(postVerify(tx),f.env)).json()).book,book);
+ }
+});
 test('one transaction cannot be retargeted and one order cannot consume another payment',async()=>{
  const f=await fixture(),a=await start(f,'the-space-before-yes'),b=await start(f,'think-again-gently'),tx='REPLAY12345678';f.payments.set(tx,paid(tx));assert.equal((await f.h(postVerify(tx,a.token),f.env)).status,200);assert.equal((await f.h(postVerify(tx,b.token),f.env)).status,409);
  const tx2='SECOND12345678';f.payments.set(tx2,paid(tx2));assert.equal((await f.h(postVerify(tx2,a.token),f.env)).status,409);

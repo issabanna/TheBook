@@ -79,6 +79,12 @@ test('payment-link title matching verifies the exact configured book when no SKU
  assert.throws(()=>assertPayment(payment({item_name:'Another book',item_number:''}),linkEnv));
  assert.throws(()=>assertPayment(payment({item_name:'Life secrets book',mc_gross:'1.00'}),linkEnv));
 });
+test('renamed OPortals book item is limited to the shared USD price and retains merchant validation',()=>{
+ const linkEnv={...env,PAYPAL_ITEM_NAME:'Life secrets book'};
+ for(const name of ['OPortals book','OPortals Book','oportals book','  OPortals   book  '])assert.equal(paymentBook(assertPayment(payment({item_name:name,item_number:'',mc_gross:'7.99'}),linkEnv),linkEnv),'life-secrets');
+ for(const changes of [{mc_gross:'8.99'},{mc_gross:'9.99'},{mc_gross:'15.00'},{mc_gross:'1.00'},{mc_currency:'EUR'},{receiver_email:'other@example.com'}])assert.throws(()=>assertPayment(payment({item_name:'OPortals book',mc_gross:'7.99',...changes}),linkEnv));
+ assert.equal(paymentBook(assertPayment(payment({item_name:'Life secrets book',mc_gross:'15.00'}),linkEnv),linkEnv),'life-secrets');
+});
 
 test('published paid download delivers the current edition only after PayPal verification',async()=>{const currentKey=randomBytes(32).toString('base64'),k=await crypto.subtle.importKey('raw',Buffer.from(currentKey,'base64'),'AES-GCM',false,['encrypt']),iv=crypto.getRandomValues(new Uint8Array(12));const bytes=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode('%PDF-1.4\ncurrent-edition'));const assets={testing:{liveStorefront:true},completedBooks:{'life-secrets.pdf':{keyEnv:'PREVIEW_V5_KEY',iv:Buffer.from(iv).toString('base64'),data:Buffer.from(bytes).toString('base64')}}};const h=createHandler(assets,okFetch);const e={...env,PREVIEW_V5_KEY:currentKey};const result=await h(post({transaction:tx}),e);assert.equal(result.status,200);const link=(await result.json()).download;const r=await h(new Request(SITE_URL+link),e);assert.equal(r.status,200);assert.equal(await r.text(),'%PDF-1.4\ncurrent-edition');const rejected=createHandler(assets,async()=>new Response('FAIL'));assert.equal((await rejected(new Request(SITE_URL+link),e)).status,403);});
 

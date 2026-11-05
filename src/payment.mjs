@@ -18,6 +18,12 @@ export function paymentBook(p,env){
  if(['Social Mirror - Detailed Analysis','Social Mirror Detailed Analysis'].includes(name))return 'social-mirror-analysis';
  const named=Object.entries(BOOK_PRODUCTS).find(([id,b])=>name===b.title);
  if(named)return named[0];
+ // The merchant's renamed shared $7.99 item. Book allocation still requires
+ // the signed checkout/verified receipt; legacy named receipts remain valid.
+ if(name?.trim().replace(/\s+/g,' ').toLowerCase()==='oportals book'){
+  if(p.get('mc_gross')!=='7.99')throw new PaymentError('Payment does not match this book.',403);
+  return 'life-secrets';
+ }
  if(env.PAYPAL_ITEM_NAME&&name===env.PAYPAL_ITEM_NAME)return 'life-secrets';
  if(name)throw new PaymentError('Payment product does not match.',403);
  const bySku=Object.entries(BOOK_PRODUCTS).find(([id,b])=>sku===b.sku);
