@@ -7,6 +7,12 @@
  let initialized=false,sdkGranted=false,lastPage=null,lastBook=null,contextReady=false,syncing=null,consentGeneration=0;
  const page=()=>location.pathname.replace(/\/$/,'')||'/';
  function choice(){try{const p=JSON.parse(localStorage.getItem(KEY)||'null');return p&&p.at<=Date.now()&&Date.now()-p.at<AGE&&p.choice==='accepted';}catch{return false;}}
+ function selectedPreference(){
+  if(!analyticsAllowed())return false;
+  try{const p=JSON.parse(localStorage.getItem(KEY)||'null');if(p?.choice==='rejected')return false;}catch{}
+  // Suggest the selection for new visitors; only Save creates a consent grant.
+  return true;
+ }
  function analyticsAllowed(){try{const p=JSON.parse(localStorage.getItem('oportals-analytics-consent-v1')||'null');return localStorage.getItem('oportals-testing-measurement')!=='deny'&&!(p?.choice==='rejected'&&Date.now()-p.at<AGE);}catch{return true;}}
  function safePage(){return page()==='/'||page()==='/ideas'||/^\/(?:book\/[a-z0-9-]+|ideas\/(?:attention|choices|leadership|meaning)|info\/(?:about|privacy|terms|refunds|contact))$/.test(page())||page()==='/checkout'||page()==='/SocialMirror'&&!location.search&&!location.hash;}
  function allowed(){return config.enabled===true&&config.testMode!==true&&config.pixelId===ID&&location.hostname==='oportals.com'&&!window.OPORTALS_OWNER&&!/^\/Testing(?:\/|$)/.test(page())&&safePage()&&choice()&&analyticsAllowed()&&!(typeof navigator!=='undefined'&&(navigator.webdriver||/bot|spider|crawler|headless|lighthouse|pagespeed/i.test(navigator.userAgent||'')));}
@@ -68,7 +74,7 @@
  }
  window.oportalsMetaPage=trackPage;window.oportalsMetaEvent=event;
  function refresh(){
-  const checkbox=document.getElementById('meta-marketing-consent');if(checkbox)checkbox.checked=choice();
+  const checkbox=document.getElementById('meta-marketing-consent');if(checkbox)checkbox.checked=selectedPreference();
   if(!allowed())return;trackPage();const book=page().startsWith('/book/')?page().slice(6):null;if(book)event('view_item',book);
   if(page()==='/checkout')event('begin_checkout',new URL(location.href).searchParams.get('book')||'life-secrets');
  }
@@ -82,8 +88,8 @@
  }
  for(const id of ['measurement-accept','analytics-accept'])document.getElementById(id)?.addEventListener('click',save);
  for(const id of ['measurement-reject','analytics-reject'])document.getElementById(id)?.addEventListener('click',revoke,{capture:true});
- for(const id of ['privacy-settings','analytics-settings'])document.getElementById(id)?.addEventListener('click',()=>{const box=document.getElementById('meta-marketing-consent');if(box)box.checked=choice();});
- document.getElementById('meta-privacy-settings')?.addEventListener('click',()=>{document.getElementById('meta-marketing-consent').checked=choice();document.getElementById('measurement-dialog').showModal();});
+ for(const id of ['privacy-settings','analytics-settings'])document.getElementById(id)?.addEventListener('click',()=>{const box=document.getElementById('meta-marketing-consent');if(box)box.checked=selectedPreference();});
+ document.getElementById('meta-privacy-settings')?.addEventListener('click',()=>{document.getElementById('meta-marketing-consent').checked=selectedPreference();document.getElementById('measurement-dialog').showModal();});
  if(document.getElementById('meta-privacy-settings'))for(const id of ['measurement-accept','measurement-reject','meta-close-settings'])document.getElementById(id)?.addEventListener('click',()=>document.getElementById('measurement-dialog').close());
  document.addEventListener('click',e=>{
   const a=e.target.closest?.('a[href]');if(!a||e.button>0||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||a.target==='_blank'||!allowed())return;

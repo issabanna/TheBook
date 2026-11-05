@@ -1,0 +1,6 @@
+{
+  "commit": "25c4109af349afae619dd6f103ec7a5d6a5d3587",
+  "versionNumber": 183,
+  "savedVersion": "appgprj_6ad6efbf30888191840317ce97b28fbc~appgver_a06726c1c1f88191aaa267185d8c72d9",
+  "scope": "Before preselecting the Meta UI option for visitors with no saved choice. Existing grants, refusals, secret configuration and verified Purchase processing remain unchanged."
+}

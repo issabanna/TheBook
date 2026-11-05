@@ -104,10 +104,11 @@ test('tracking stays disabled without activation, status/retry are owner-only, C
  assert.equal((await metaTrackingStatus({...f.env,META_TRACKING_ENABLED:'false'})).enabled,false);assert.equal((await metaTrackingStatus({...f.env,META_PIXEL_ID:'other'})).enabled,false);
 });
 
-function browser({href=origin+'/book/art-of-attention?utm_source=instagram&utm_medium=paid_social&utm_campaign=attention_cro&fbclid=SAFECLICK',consented=true,analyticsChoice='accepted',owner=false,enabled=true,testMode=false,delayedConsent=false}={}){
+function browser({href=origin+'/book/art-of-attention?utm_source=instagram&utm_medium=paid_social&utm_campaign=attention_cro&fbclid=SAFECLICK',consented=true,metaChoice=consented?'accepted':null,analyticsChoice='accepted',owner=false,enabled=true,testMode=false,delayedConsent=false}={}){
  const {document,Event}=parseHTML('<html><head><title>The Art of Attention</title><script id="cro-products" type="application/json">'+JSON.stringify(Object.fromEntries(Object.entries(BOOK_PRODUCTS).filter(([,b])=>!b.service).map(([id,b])=>[id,{title:b.title,price:b.price}])) )+'</script><script id="meta-tracking-config" type="application/json">'+JSON.stringify({pixelId:'4490808921236945',enabled,testMode})+'</script></head><body><input id="meta-marketing-consent" type="checkbox"><button id="measurement-accept">Save</button><button id="measurement-reject">Reject</button><a id="preview" data-sample="art-of-attention" href="#inside-book">Preview</a><a id="buy" data-purchase="art-of-attention" href="/checkout?book=art-of-attention">Buy</a></body></html>');
+ const settingsButton=document.createElement('button');settingsButton.id='privacy-settings';document.body.appendChild(settingsButton);
  let current=new URL(href);const local=new Map(),tab=new Map(),posts=[],cookies=new Map(),listeners={};
- local.set('oportals-analytics-consent-v1',JSON.stringify({choice:analyticsChoice,at:Date.now()}));if(consented)local.set('oportals-meta-consent-v1',JSON.stringify({choice:'accepted',at:Date.now()}));
+ local.set('oportals-analytics-consent-v1',JSON.stringify({choice:analyticsChoice,at:Date.now()}));if(metaChoice)local.set('oportals-meta-consent-v1',JSON.stringify({choice:metaChoice,at:Date.now()}));
  tab.set('oportals-visit-session-live',JSON.stringify({id:sid,last:Date.now(),source:'instagram'}));
  Object.defineProperty(document,'cookie',{get:()=>[...cookies].map(([k,v])=>k+'='+v).join('; '),set:s=>{const [value]=s.split(';'),i=value.indexOf('=');if(s.includes('Max-Age=0'))cookies.delete(value.slice(0,i));else cookies.set(value.slice(0,i),value.slice(i+1));},configurable:true});
  const location={get href(){return current.href;},get origin(){return current.origin;},get hostname(){return current.hostname;},get pathname(){return current.pathname;},get search(){return current.search;},get hash(){return current.hash;},assign:v=>{current=new URL(v,current);},reload(){}};
@@ -169,4 +170,17 @@ test('diagnostic rejects anonymous, cross-origin, fake Purchase payloads and exc
 });
 test('diagnostic errors expose safe codes only and missing secrets fail closed',async()=>{
  const f=await fixture();f.env.PREVIEW_OWNER_EMAIL='owner@example.com';f.metaFailure=true;const response=await f.h(diagnostic(),f.env),data=await response.json();assert.equal(response.status,502);assert.equal(data.accepted,false);assert.equal(data.metaErrorCode,190);assert.ok(!JSON.stringify(data).includes('secret error'));assert.ok(!JSON.stringify(data).includes(f.env.META_CAPI_ACCESS_TOKEN));delete f.env.META_CAPI_ACCESS_TOKEN;assert.equal((await f.h(diagnostic(),f.env)).status,503);
+});
+test('new visitors see the Meta option selected while SDK and server grants wait for acceptance',()=>{
+ const b=browser({consented:false});assert.equal(b.document.getElementById('meta-marketing-consent').checked,true);assert.equal(b.local.has('oportals-meta-consent-v1'),false);assert.equal(b.calls().length,0);assert.ok(!b.posts.some(p=>p.url==='/api/meta/consent'&&p.data.consent===true));
+ b.document.getElementById('privacy-settings').dispatchEvent(new b.window.Event('click'));assert.equal(b.document.getElementById('meta-marketing-consent').checked,true);assert.equal(b.calls().length,0);
+ b.document.getElementById('measurement-accept').dispatchEvent(new b.window.Event('click'));assert.equal(b.calls().filter(a=>a[0]==='init').length,1);assert.ok(b.posts.some(p=>p.url==='/api/meta/consent'&&p.data.consent===true));
+});
+test('saved Meta and all-measurement opt-outs remain unchecked when opening settings',()=>{
+ for(const options of [{metaChoice:'rejected'},{consented:false,analyticsChoice:'rejected'}]){
+  const b=browser(options);assert.equal(b.document.getElementById('meta-marketing-consent').checked,false);b.document.getElementById('privacy-settings').dispatchEvent(new b.window.Event('click'));assert.equal(b.document.getElementById('meta-marketing-consent').checked,false);assert.equal(b.calls().length,0);assert.ok(!b.posts.some(p=>p.url==='/api/meta/consent'&&p.data.consent===true));
+ }
+});
+test('a new visitor can uncheck the suggested Meta option and save without enabling advertising tracking',()=>{
+ const b=browser({consented:false});b.document.getElementById('meta-marketing-consent').checked=false;b.document.getElementById('measurement-accept').dispatchEvent(new b.window.Event('click'));assert.equal(JSON.parse(b.local.get('oportals-meta-consent-v1')).choice,'rejected');assert.equal(b.calls().length,0);b.document.getElementById('privacy-settings').dispatchEvent(new b.window.Event('click'));assert.equal(b.document.getElementById('meta-marketing-consent').checked,false);
 });
