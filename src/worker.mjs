@@ -5,7 +5,7 @@ import {usesSharedBookCheckout,sharedBookCheckoutEnabled,isNewSharedBookPayment,
 import {testingOnlyBooks,testingOnlyBookSlugs} from './testing-catalogue.mjs';
 import {adminAuthRoute,adminLoginPage,adminSession,adminSignOutControl} from './admin-auth.mjs';
 import {siteSessionsReport,siteSessionTimeline,setSessionStatsExclusion} from './sessions.mjs';
-import {visitsOwner,withVisitsTracking,recordSiteVisit,siteVisitsReport} from './visits.mjs';
+import {visitsDay,visitsOwner,withVisitsTracking,recordSiteVisit,siteVisitsReport} from './visits.mjs';
 import {socialMirrorApi} from './social-mirror.mjs';
 import {registerFreeBook,freeBookGrant,noteFreeBookDownload,freeBookLeadReport} from './free-book-leads.mjs';
 import {submitContact,contactInbox,processContactQueue,deleteContact} from './contact.mjs';
@@ -69,13 +69,43 @@ async function captureDownload(env,name){
  if(!env.DB)throw new PaymentError('Download recording is temporarily unavailable. Please try again shortly.',503);
  await env.DB.prepare('INSERT INTO download_counts (book_id, kind, download_count, updated_at) VALUES (?, ?, 1, ?) ON CONFLICT(book_id, kind) DO UPDATE SET download_count = download_counts.download_count + 1, updated_at = excluded.updated_at').bind(item.bookId,item.kind,new Date().toISOString()).run();
 }
-async function downloadReport(env){
- if(!env.DB)throw new PaymentError('Download reporting is not available yet.',503);
- const {results}=await env.DB.prepare('SELECT book_id, kind, download_count, updated_at FROM download_counts ORDER BY book_id, kind').all();
- return downloadCatalogue.map(b=>{const rows=results.filter(r=>r.book_id===b.id);return {...b,sample:rows.find(r=>r.kind==='sample')?.download_count||0,full:rows.find(r=>r.kind==='full')?.download_count||0,lastDownload:rows.map(r=>r.updated_at).sort().at(-1)||null}});
+function downloadRange(url,now=new Date()){
+ const today=visitsDay(now),from=url.searchParams.get('from'),to=url.searchParams.get('to');
+ const valid=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s+'T00:00:00Z'))&&new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
+ if(from||to){
+  if(!valid(from)||!valid(to)||from>to||to>today||(Date.parse(to)-Date.parse(from))/86400000>365)throw new PaymentError('Choose valid start and end dates, up to 366 days, ending today or earlier.',400);
+  return {preset:'custom',from,to,timeZone:'Asia/Amman'};
+ }
+ const preset=url.searchParams.get('range')||'all';
+ if(!['all','today','7d','30d'].includes(preset))throw new PaymentError('Choose All time, Today, Last 7 days, Last 30 days, or a custom date range.',400);
+ if(preset==='all')return {preset,from:null,to:null,timeZone:'Asia/Amman'};
+ const start=new Date(today+'T00:00:00Z');start.setUTCDate(start.getUTCDate()-({today:1,'7d':7,'30d':30}[preset]-1));
+ return {preset,from:start.toISOString().slice(0,10),to:today,timeZone:'Asia/Amman'};
 }
-function reportPage(rows){
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Book downloads — OPortals.com</title><style>body{font:15px/1.6 Arial,sans-serif;color:#141414;margin:40px auto;padding:0 6%;max-width:1000px}h1{font-size:42px;line-height:1.1;letter-spacing:-1.5px}a{color:#0766ff}table{border-collapse:collapse;width:100%;margin:30px 0}th,td{text-align:left;border-bottom:1px solid #e4e8ef;padding:14px 10px}th{font-size:12px;color:#626975}td:nth-child(n+2){font-variant-numeric:tabular-nums}small,p{color:#626975}.table{overflow:auto}.total{font-size:23px;font-weight:bold;color:#0766ff}@media(max-width:600px){body{margin-top:25px}h1{font-size:34px}th,td{font-size:12px;padding:12px 8px}}</style></head><body><a href="/Testing">← Back to the private bookstore</a><h1>Book downloads.</h1><p>Private owner report · Testing downloads only</p><div class="total">${rows.reduce((n,r)=>n+r.sample+r.full,0)} recorded download requests</div><div class="table"><table><thead><tr><th>Book</th><th>Free samples</th><th>Full books</th><th>Last recorded (UTC)</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.title}</td><td>${r.sample}</td><td>${r.full}</td><td>${r.lastDownload?r.lastDownload.replace('T',' ').slice(0,19):'—'}</td></tr>`).join('')}</tbody></table></div><p><small>Counts begin when recording is enabled. A count means the server served an explicit PDF download request; it does not prove that the file was saved, read, or downloaded by a unique person. Repeat downloads count again. Inline previews, HEAD requests, and recognised prefetches do not count. Owner test downloads count too. Public checkout and public sample routes are outside this private report.</small></p><p><small>No email addresses, IP addresses, or personal identifiers are stored in these counters. Other titles will appear here when downloadable editions are available.</small></p><a href="/Testing/downloads.json">View counts as JSON ↗</a></body></html>`;
+async function downloadReport(env,url){
+ const range=downloadRange(url);
+ if(!env.DB)throw new PaymentError('Download reporting is not available yet.',503);
+ const sql=range.preset==='all'?'SELECT book_id, kind, download_count, updated_at FROM download_counts ORDER BY book_id, kind':'SELECT book_id, kind, SUM(download_count) AS download_count, MAX(updated_at) AS updated_at FROM download_daily_counts WHERE day BETWEEN ? AND ? GROUP BY book_id, kind ORDER BY book_id, kind';
+ const query=env.DB.prepare(sql),{results}=await (range.preset==='all'?query:query.bind(range.from,range.to)).all();
+ const tracking=await env.DB.prepare('SELECT started_at FROM download_date_tracking WHERE id=1').all();
+ const books=downloadCatalogue.map(b=>{const rows=results.filter(r=>r.book_id===b.id);return {...b,sample:Number(rows.find(r=>r.kind==='sample')?.download_count)||0,full:Number(rows.find(r=>r.kind==='full')?.download_count)||0,lastDownload:rows.map(r=>r.updated_at).sort().at(-1)||null}});
+ return {books,range,dateTrackingStartedAt:tracking.results[0]?.started_at||null};
+}
+function reportPage(report,url){
+ const {books:rows,range,dateTrackingStartedAt}=report,base=url.pathname.startsWith('/Testing/')?'/Testing':'',path=base+'/downloads';
+ const query=range.preset==='custom'?new URLSearchParams({from:range.from,to:range.to}):new URLSearchParams({range:range.preset});
+ const label=range.preset==='all'?'All time':range.from+' to '+range.to;
+ const started=dateTrackingStartedAt?new Date(dateTrackingStartedAt).toLocaleString('en-GB',{timeZone:'Asia/Amman',dateStyle:'medium',timeStyle:'short'}):'this update';
+ const total=key=>rows.reduce((n,r)=>n+r[key],0),today=visitsDay();
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Book downloads — OPortals.com</title><style>
+ body{font:15px/1.6 Arial,sans-serif;color:#23333c;margin:40px auto;padding:0 6%;max-width:1100px;background:white}h1{font-size:40px;line-height:1.1;letter-spacing:-1px;margin-bottom:12px}a{color:#365d6f}small,p{color:#626f74}.filters{margin:25px 0;padding:18px;border:1px solid #dde5e6;border-radius:10px;background:#f9fbfa}.presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.presets a{border:1px solid #d5dfe0;border-radius:6px;padding:8px 12px;text-decoration:none;background:white;min-height:24px}.presets a[aria-current=page]{background:#e2eff2;border-color:#aac6d0;color:#183b4d;font-weight:bold}form{display:flex;flex-wrap:wrap;align-items:end;gap:12px}label{display:grid;gap:4px;font-size:13px;color:#455b62}input,button{box-sizing:border-box;min-height:44px;font:inherit;border:1px solid #b9cbd0;border-radius:6px;padding:9px 12px;background:white;color:#23333c}button{background:#d4e9ee;color:#183b4d;font-weight:bold;cursor:pointer}form small{align-self:center;font-size:12px}.summary{display:flex;flex-wrap:wrap;gap:15px 30px;margin:22px 0}.summary strong{font-size:26px;color:#254b60;display:block}.summary span{font-size:13px;color:#626f74}.coverage{font-size:13px;max-width:850px}.table{overflow:auto}table{border-collapse:collapse;width:100%;margin:22px 0}th,td{text-align:left;border-bottom:1px solid #e4e8e7;padding:14px 10px}th{font-size:12px;color:#626f74}td:nth-child(n+2){font-variant-numeric:tabular-nums;white-space:nowrap}@media(max-width:600px){body{margin-top:25px}h1{font-size:34px}th,td{font-size:12px;padding:12px 8px}.filters{padding:12px}form label{flex:1 1 135px}input{width:100%;min-width:0}form button{width:100%}.summary{gap:12px 22px}.presets a{font-size:13px;padding:8px 10px}}</style></head><body>
+ <a href="${base||'/'}">← Back to the bookstore</a><h1>Book downloads.</h1><p>Private owner report · Testing downloads only</p>
+ <section class="filters" aria-label="Filter downloads by date"><nav class="presets" aria-label="Date shortcuts">${[['all','All time'],['today','Today'],['7d','Last 7 days'],['30d','Last 30 days']].map(([value,title])=>`<a href="${path}?range=${value}"${range.preset===value?' aria-current="page"':''}>${title}</a>`).join('')}</nav>
+ <form method="get" action="${path}"><label for="download-from">From<input id="download-from" type="date" name="from" max="${today}" value="${range.from||''}" required></label><label for="download-to">To<input id="download-to" type="date" name="to" max="${today}" value="${range.to||''}" required></label><button type="submit">Apply dates</button><small>Dates use Amman time (UTC+3). Both dates are included.</small></form></section>
+ <p id="selected-range"><strong>${label}</strong></p><div class="summary" aria-label="Download totals"><div><strong>${total('sample')+total('full')}</strong><span>Download requests</span></div><div><strong>${total('sample')}</strong><span>Free samples</span></div><div><strong>${total('full')}</strong><span>Full books</span></div></div>
+ <p class="coverage">Date filters include downloads recorded since ${started} (Amman time). Older download totals remain available under <a href="${path}?range=all">All time</a>.</p>
+ <div class="table"><table><thead><tr><th>Book</th><th>Free samples</th><th>Full books</th><th>Last recorded in range (Amman)</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.title}</td><td>${r.sample}</td><td>${r.full}</td><td>${r.lastDownload?new Date(r.lastDownload).toLocaleString('en-GB',{timeZone:'Asia/Amman',dateStyle:'medium',timeStyle:'short'}):'—'}</td></tr>`).join('')}</tbody></table></div>
+ <p><small>A count means the server served an explicit PDF download request; it does not prove that the file was saved, read, or downloaded by a unique person. Repeat downloads count again. Inline previews, HEAD requests, and recognised prefetches do not count. Owner test downloads count too. Public checkout and public sample routes are outside this private report.</small></p><p><small>No email addresses, IP addresses, or personal identifiers are stored in these counters.</small></p><a id="download-json" href="${path}.json?${query.toString().replaceAll('&','&amp;')}">View filtered counts as JSON ↗</a></body></html>`;
 }
 export function createHandler(assets, fetcher = fetch) {
  return async function handler(request, env, ctx) {
@@ -208,8 +238,8 @@ export function createHandler(assets, fetcher = fetch) {
     }
     if(path==='/Testing/downloads' || path==='/Testing/downloads.json'){
      if(request.method==='HEAD')return new Response(null,{headers:privateHeaders});
-     const report=await downloadReport(env);
-     return new Response(path.endsWith('.json')?JSON.stringify({scope:'private-testing',books:report}):reportPage(report),{headers:{...privateHeaders,'Content-Type':path.endsWith('.json')?'application/json':'text/html; charset=utf-8'}});
+     let report;try{report=await downloadReport(env,url)}catch(e){if(e instanceof PaymentError&&e.status===400&&!path.endsWith('.json'))return new Response(page('Choose download dates',`<h1>Choose a valid date range.</h1><p>${e.message}</p><a href="${url.pathname.startsWith('/Testing/')?'/Testing':''}/downloads">Back to book downloads</a>`),{status:400,headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});throw e;}
+     return new Response(path.endsWith('.json')?JSON.stringify({scope:'private-testing',...report}):reportPage(report,url),{headers:{...privateHeaders,'Content-Type':path.endsWith('.json')?'application/json':'text/html; charset=utf-8'}});
     }
     if(path.startsWith('/Testing/books/')) {
      const name=path.slice('/Testing/books/'.length);
